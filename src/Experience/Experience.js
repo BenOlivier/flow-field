@@ -1,14 +1,11 @@
 import * as THREE from 'three'
 import Debug from './Utils/Debug.js'
 import Sizes from './Utils/Sizes.js'
-import Loading from './Utils/Loading.js'
 import Time from './Utils/Time.js'
 import Camera from './World/Camera.js'
 import Pointer from './Utils/Pointer.js'
 import Renderer from './Renderer.js'
-import World from './World/World.js'
-import Resources from './Utils/Resources.js'
-import sources from './sources.js'
+import FlowField from './World/FlowField.js'
 
 let instance = null
 
@@ -34,12 +31,10 @@ export default class Experience
         this.sizes = new Sizes()
         this.time = new Time()
         this.scene = new THREE.Scene()
-        this.loading = new Loading()
-        this.resources = new Resources(sources)
         this.camera = new Camera()
         this.pointer = new Pointer()
         this.renderer = new Renderer()
-        this.world = new World()
+        this.flowfield = new FlowField()
 
         // Resize event
         this.sizes.on('resize', () =>
@@ -62,9 +57,7 @@ export default class Experience
 
     update()
     {
-        this.world.update()
         this.renderer.update()
-        this.camera.update()
     }
 
     destroy()
