@@ -39,25 +39,16 @@ export default class Experience
         // Resize event
         this.sizes.on('resize', () =>
         {
-            this.resize()
+            this.camera.resize()
+            this.renderer.resize()
         })
 
         // Time tick event
         this.time.on('tick', () =>
         {
-            this.update()
+            this.flowfield.update()
+            this.renderer.update()
         })
-    }
-
-    resize()
-    {
-        this.camera.resize()
-        this.renderer.resize()
-    }
-
-    update()
-    {
-        this.renderer.update()
     }
 
     destroy()

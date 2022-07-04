@@ -1,72 +1,161 @@
 import * as THREE from 'three'
-import { Quaternion } from 'three'
 import Experience from '../Experience.js'
+import PerlinNoise from '../Utils/PerlinNoise.js'
+
+function Particle(x, y, z) {
+    this.pos = new THREE.Vector3(x, y, z)
+    this.vel = new THREE.Vector3(0, 0, 0)
+    this.acc = new THREE.Vector3(0, 0, 0)
+    this.angle = new THREE.Euler(0, 0, 0)
+    this.mesh = null
+}
+
+Particle.prototype.init = function(scene){
+    var point = new THREE.Points(this.pointGeo, this.pointMat)
+    point.geometry.dynamic  = true
+    point.geometry.verticesNeedUpdate = true
+    scene.add(point)
+    this.mesh = point
+}
+
+Particle.prototype.update = function() {
+    this.acc.set(1, 1, 1)
+    this.acc.applyEuler(this.angle)
+    this.acc.multiplyScalar(0.1) //this.params.noiseStrength
+    
+    this.acc.clampLength(0, 0.1) //this.params.particleSpeed
+    this.vel.clampLength(0, 0.1) //this.params.particleSpeed
+    
+    this.vel.add(this.acc)
+    this.pos.add(this.vel)
+    
+    // this.acc.multiplyScalar(params.particleDrag);
+    // this.vel.multiplyScalar(params.particleDrag);
+    
+    if(this.pos.x > 20) this.pos.x = 0 + Math.random() //params.size
+    if(this.pos.y > 20) this.pos.y = 0 + Math.random() //params.size
+    if(this.pos.z > 20) this.pos.z = 0 + Math.random() //params.size
+    if(this.pos.x < 0) this.pos.x = 20 - Math.random()
+    if(this.pos.y < 0) this.pos.y = 20 - Math.random()
+    if(this.pos.z < 0) this.pos.z = 20 - Math.random()
+    
+    this.mesh.position.set(this.pos.x, this.pos.y, this.pos.z)
+}
 
 export default class Object
 {
     constructor()
     {
         this.experience = new Experience()
+        this.perlinNoise = new PerlinNoise()
         this.scene = this.experience.scene
         this.sizes = this.experience.sizes
         this.time = this.experience.time
         this.debug = this.experience.debug
 
-        this.setGrid()
+        this.params = {
+            size: 24,
+            noiseScale: 0.1,
+            noiseSpeed: 0.005,
+            noiseStrength: 0.1,
+            noiseFreeze: false,
+            particleCount: 5000,
+            particleSize: 0.5,
+            particleSpeed: 0.1,
+            particleDrag: 0.9,
+            particleColor: 0xffffff
+        }
+
+        if(this.debug.active)
+        {
+            this.debugFolder = this.debug.ui.addFolder('flowField')
+            this.debugFolder.add(this.params, 'size', 1, 100)
+            this.debugFolder.add(this.params, 'noiseScale', 0, 0.5)
+            this.debugFolder.add(this.params, 'noiseSpeed', 0, 0.05)
+            this.debugFolder.add(this.params, 'noiseStrength', 0, 0.5)
+            this.debugFolder.add(this.params, 'noiseFreeze');
+
+            this.debugFolder.add(this.params, 'particleCount', 0, 40000)
+            this.debugFolder.add(this.params, 'particleSize', 0, 1)
+            this.debugFolder.add(this.params, 'particleSpeed', 0, 0.2)
+            this.debugFolder.add(this.params, 'particleDrag', 0.8, 1.00)
+            this.debugFolder.addColor(this.params, 'particleColor')
+        }
+
+        this.frameCount = 0
+        this.gridIndex = 0
+        this.noise = 0
+        this.noiseOffset = Math.random() * 100
+        this.numParticlesOffset = 0
+        this.p = null
+
+        this.setParticles()
     }
 
-    setGrid()
+    setParticles()
     {
-        this.flowField = new THREE.Group()
-        this.scene.add(this.flowField)
-        this.flowField.position.set(-4.5, -4.5, 0)
-        
-        const grid = []
-        const steps = 10
-        const spacing = 1
+        this.particles = []
 
-        const cubeGeo = new THREE.BoxGeometry(0.05, 0.3, 0.05)
-        const cubeMat = new THREE.MeshBasicMaterial({color: '#ffffff'})
+        this.pointGeo = new THREE.BufferGeometry().setFromPoints
+            (new THREE.Vector3(0, 0, 0))
 
-        // Create grid
-        for(let column = 0; column < steps; column++)
+        this.pointMat = new THREE.PointsMaterial({
+            color: this.params.particleColor,
+            size: this.params.particleSize,
+            sizeAttenuation: true,
+            transparent: true,
+            opacity: 0.35,
+            blending: THREE.AdditiveBlending
+        })
+    }
+
+    update()
+    {
+        // Update particle count
+        this.numParticlesOffset = parseInt(this.params.particleCount - this.particles.length)
+
+        if(this.numParticlesOffset > 0)
         {
-            for(let row = 0; row < steps; row++)
+            for(let i = 0; i < this.numParticlesOffset; i++)
             {
-                const xPos = spacing * column
-                const yPos = spacing * row
-                const zRot = column / steps * Math.PI
-                const point = {x: 0, y: 0, z: zRot}
-                grid.push(point)
-
-                const cubeMesh = new THREE.Mesh(cubeGeo, cubeMat)
-                cubeMesh.position.set(xPos, yPos, 0)
-                cubeMesh.quaternion.setFromEuler(new THREE.Euler(point.x, point.y, point.z))
-                this.flowField.add(cubeMesh)
+                // var particle = new Particle(
+                //     Math.random() * this.params.size,
+                //     Math.random() * this.params.size,
+                //     Math.random() * this.params.size
+                // )
+                var particle = new Particle(0, 0, 0)
+                particle.init(this.scene)
+                this.particles.push(particle)
+            }
+        }
+        else
+        {
+            for(let i = 0; i < -this.numParticlesOffset; i++)
+            {
+                this.scene.remove(this.particles[i].mesh)
+                this.particles[i] = null
+                this.particles.splice(i, 1)
             }
         }
 
-        // Draw line
-        const points = []
-        const startingX = 2
-        const startingY = 7
-        const stepLength = 1
-        const numSteps = 3
-
-        let currentX = startingX
-        let currentY = startingY
-
-        for(let step = 0; step < numSteps; step++)
+        // Update particles based on their coords
+        for(let i = 0; i < this.particles.length; i++)
         {
-            const rowIndex = currentX
-            // const angle = grid[]
-        }
+            var particle = this.particles[i]
+            
+            var noise = this.perlinNoise.noise(
+                particle.pos.x * this.params.noiseScale,
+                particle.pos.y * this.params.noiseScale,
+                particle.pos.z * this.params.noiseScale + this.noiseOffset
+                    + this.frameCount * this.params.noiseSpeed
+            ) * Math.PI * 2
 
-        points.push( new THREE.Vector3( startingX, startingY, 0 ) )
-        points.push( new THREE.Vector3( 10, 0, 0 ) )
-        const lineGeo = new THREE.BufferGeometry().setFromPoints( points )
-        const lineMat = new THREE.LineBasicMaterial({ color: 0x0000ff })
-        const line = new THREE.Line( lineGeo, lineMat )
-        this.flowField.add(line)
+            particle.angle.set(noise, noise, noise)
+            particle.update()
+        }
+        
+        // material.color.setHex(params.particleColor)
+        // material.size = params.particleSize
+        // if(!params.noiseFreeze) frameCount++
     }
 }
