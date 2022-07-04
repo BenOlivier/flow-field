@@ -14,14 +14,16 @@ export default class Object
         this.debug = this.experience.debug
 
         this.params = {
-            gridSize: 5
+            gridSize: 5,
+            noiseScale: 0.1,
+            noiseSpeed: 0.0002
         }
 
         if(this.debug.active)
         {
             this.debugFolder = this.debug.ui.addFolder('flowField')
-            this.debugFolder.add(this.params, 'size', 1, 100)
-            this.debugFolder.add(this.params, 'noiseScale', 0, 0.5)
+            this.debugFolder.add(this.params, 'gridSize', 1, 20)
+            this.debugFolder.add(this.params, 'noiseScale', 0, 100)
             this.debugFolder.add(this.params, 'noiseSpeed', 0, 0.05)
             this.debugFolder.add(this.params, 'noiseStrength', 0, 0.5)
             this.debugFolder.add(this.params, 'noiseFreeze');
@@ -49,24 +51,24 @@ export default class Object
             this.arrow = null
         }
 
-        Vector.prototype.update = function(scene) {
+        Vector.prototype.update = function(flowField) {
             this.vec3.set(1, 1, 1)
             this.vec3.applyEuler(this.angle)
             this.vec3.multiplyScalar(0.1)
-
-            if(!this.arrow){
+            if(!this.arrow)
+            {
                 var arrowHelper = new THREE.ArrowHelper(
                     this.angle.toVector3(),
                     new THREE.Vector3( this.x, this.y, this.z ),
                     0.2,
                     0x0000ff,
-                    0.1,
-                    0.1
+                    0.08,
+                    0.08
                 )
-                scene.add(arrowHelper)
+                flowField.add(arrowHelper)
                 this.arrow = arrowHelper
-                this.arrow.setDirection(this.vec3.normalize())
             }
+            this.arrow.setDirection(this.vec3.normalize())
         }
 
         for(let i = 0; i <= this.params.gridSize; i++)
@@ -84,17 +86,18 @@ export default class Object
 
     update()
     {
-        for(let i = 0; i < this.vectors.length; i++){
-            var v = this.vectors[i];
+        for(let i = 0; i < this.vectors.length; i++)
+        {
+            var vector = this.vectors[i]
 
             var noise = this.perlinNoise.noise(
-                v.x * this.params.scale,
-                v.y * this.params.scale,
-                v.z * this.params.scale
-            ) * Math.PI * 4;
+                vector.x * this.params.noiseScale,
+                vector.y * this.params.noiseScale,
+                vector.z * this.params.noiseScale + this.time.elapsed * this.params.noiseSpeed
+            ) * Math.PI * 4
             
-            // v.angle.set(noise, noise, noise)
-            v.update(this.flowField)
+            vector.angle.set(noise, noise, noise)
+            vector.update(this.flowField)
         }
     }
 }
