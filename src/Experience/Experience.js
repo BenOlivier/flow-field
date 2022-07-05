@@ -4,7 +4,7 @@ import Sizes from './Utils/Sizes.js'
 import Time from './Utils/Time.js'
 import Camera from './World/Camera.js'
 import Pointer from './Utils/Pointer.js'
-import Renderer from './Renderer.js'
+import Renderer from './Utils/Renderer.js'
 import FlowField from './World/FlowField.js'
 
 let instance = null
