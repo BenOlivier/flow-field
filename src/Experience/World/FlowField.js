@@ -43,7 +43,7 @@ export default class flowField
 
         function CreateLine(x, y, z){
             const line = {
-                points: [x, y, z],
+                points: [new THREE.Vector3(x, y, z)],
                 angle: new THREE.Euler(0, 0, 0),
                 vec3: new THREE.Vector3(0, 0, 0),
                 length: 10
@@ -67,42 +67,25 @@ export default class flowField
         for(const line of this.lines)
         {
             const positions = []
-            for(let i = 0; i < line.length * 3; i += 3)
+            for(let i = 0; i < line.length; i ++)
             {
-                for(let j = 0; j < 3; j++)
-                {
-                    const noise = this.perlinNoise.noise(
-                        line.points[i] * this.params.noiseScale,
-                        line.points[i + j] * this.params.noiseScale,
-                        line.points[i + j] * this.params.noiseScale
-                    ) * Math.PI * 4
+                const noise = this.perlinNoise.noise(
+                    line.points[i].x * this.params.noiseScale,
+                    line.points[i].y * this.params.noiseScale,
+                    line.points[i].z * this.params.noiseScale
+                ) * Math.PI * 4
 
-                    line.angle.set(noise, noise, noise)
-                    line.vec3.set(1, 1, 1)
-                    // line.vec3.applyEuler(line.angle)
-                    line.vec3.multiplyScalar(0.1)
-                    line.points.push(line.points[i + j] + line.vec3.x)
-                        
-                    switch(j)
-                    {
-                        case 0: line.points.push(line.points[i + j] + line.vec3.x)
-                            break
-                        case 1: line.points.push(line.points[i + j] + line.vec3.y)
-                            break
-                        case 2: line.points.push(line.points[i + j] + line.vec3.z)
-                            break
-                    }
-                }
-
-                const pos = new THREE.Vector3(
-                    line.points[i],
-                    line.points[i + 1],
-                    line.points[i + 2]
-                )
-                positions.push(pos.clone())
-                console.log(positions)
+                line.angle.set(noise, noise, noise)
+                line.vec3.set(1, 1, 1)
+                line.vec3.applyEuler(line.angle)
+                line.vec3.multiplyScalar(0.1)
+                line.points.push(new THREE.Vector3(
+                    line.points[i].x + line.vec3.x,
+                    line.points[i].y + line.vec3.y,
+                    line.points[i].z + line.vec3.z
+                ))
             }
-            const lineGeo = new THREE.BufferGeometry().setFromPoints(positions)
+            const lineGeo = new THREE.BufferGeometry().setFromPoints(line.points)
             const lineMat = new THREE.LineBasicMaterial( { color: 0x00ff00 } )
             const lineMesh = new THREE.Line( lineGeo, lineMat )
             this.flowField.add(lineMesh)
