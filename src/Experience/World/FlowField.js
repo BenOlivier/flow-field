@@ -69,25 +69,30 @@ export default class flowField
             const positions = []
             for(let i = 0; i < line.length * 3; i += 3)
             {
-                const noise = this.perlinNoise.noise(
-                    line.points[i] * this.params.noiseScale,
-                    line.points[i + 1] * this.params.noiseScale,
-                    line.points[i + 2] * this.params.noiseScale
-                ) * Math.PI * 4
+                for(let j = 0; j < 3; j++)
+                {
+                    const noise = this.perlinNoise.noise(
+                        line.points[i] * this.params.noiseScale,
+                        line.points[i + j] * this.params.noiseScale,
+                        line.points[i + j] * this.params.noiseScale
+                    ) * Math.PI * 4
+
+                    line.angle.set(noise, noise, noise)
+                    line.vec3.set(1, 1, 1)
+                    // line.vec3.applyEuler(line.angle)
+                    line.vec3.multiplyScalar(0.1)
+                    line.points.push(line.points[i + j] + line.vec3.x)
                         
-                line.angle.set(noise, noise, noise)
-                line.vec3.set(1, 1, 1)
-                // line.vec3.applyEuler(line.angle)
-                // line.vec3.multiplyScalar(0.1)
-
-                // for(let j = 0; j < 3; j++)
-                // {
-                //     line.points.push(line.points[i + j] + line.vec3.x)
-                // }
-
-                line.points.push(line.points[i + 1])
-                line.points.push(line.points[i + 2])
-                line.points.push(line.points[i + 3])
+                    switch(j)
+                    {
+                        case 0: line.points.push(line.points[i + j] + line.vec3.x)
+                            break
+                        case 1: line.points.push(line.points[i + j] + line.vec3.y)
+                            break
+                        case 2: line.points.push(line.points[i + j] + line.vec3.z)
+                            break
+                    }
+                }
 
                 const pos = new THREE.Vector3(
                     line.points[i],
