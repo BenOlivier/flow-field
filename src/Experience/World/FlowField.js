@@ -5,6 +5,19 @@ import Noise from '../Utils/Noise.js'
 import SimplexNoise from 'simplex-noise'
 // import { MeshLine, MeshLineMaterial, MeshLineRaycast } from 'three.meshline'
 
+function CreateLine(position){
+    const line = {
+        points: [position],
+        angle: new THREE.Euler(0, 0, 0),
+        vec3: new THREE.Vector3(0, 0, 0),
+        speed: 0.08,
+        length: 10,
+        lifetime: 20,
+        age: 0
+    }
+    return line
+}
+
 export default class flowField
 {
     constructor()
@@ -20,12 +33,9 @@ export default class flowField
         this.lineMat = new THREE.LineBasicMaterial( { color: 0x00ff00 } )
 
         this.params = {
-            gridSize: 1,
-            gridStep: 0.25,
-            lineSpeed: 20,
-            lineLength: 10,
-            noiseScale: 0.5,
-            pointFrequency: 0.1
+            sphereRadius: 1,
+            noiseScale: 0.001,
+            noiseSpeed: 0.001
         }
 
         if(this.debug.active)
@@ -48,51 +58,35 @@ export default class flowField
         this.lines = []
         this.flowField = new THREE.Object3D()
         this.scene.add(this.flowField)
-
-        function CreateLine(position){
-            const line = {
-                points: [position],
-                angle: new THREE.Euler(0, 0, 0),
-                vec3: new THREE.Vector3(0, 0, 0),
-                length: 10
-            }
-            return line
-        }
-
-        // Instantiate lines
-        for (let z = -this.params.gridSize;
-            z < this.params.gridSize;
-            z += this.params.gridStep)
-        {
-            for (let y = -this.params.gridSize;
-                y < this.params.gridSize;
-                y += this.params.gridStep)
-            {
-                for (let x = -this.params.gridSize;
-                    x < this.params.gridSize;
-                    x += this.params.gridStep)
-                {
-                    const line = CreateLine(new THREE.Vector3(x, y, z))
-                    this.lines.push(line)
-                }
-            }
-        }
-
-        this.frame = 0
-        this.total = 0
+        this.instanceTimer = 0
+        this.updateTimer = 0
     }
 
     update()
     {
-        this.frame++
-        if(this.frame > 60 / this.params.lineSpeed)
+        this.instanceTimer++
+        if(this.instanceTimer > 60 / 30)
         {
-            this.frame = 0
-            this.total++
+            this.instanceTimer = 0
+            this.instantiateLine()
+        }
+        
+        this.updateTimer++
+        if(this.updateTimer > 60 / 30)
+        {
+            this.updateTimer = 0
             this.disposePrevious()
             this.calculateNextPoints()
         }
         
+    }
+
+    instantiateLine()
+    {
+        const randomDir = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5).normalize()
+        const randomPos = randomDir.multiplyScalar(this.params.sphereRadius)
+        const line = CreateLine(new THREE.Vector3(randomPos.x , randomPos.y, randomPos.z))
+        this.lines.push(line)
     }
 
     disposePrevious()
@@ -111,8 +105,16 @@ export default class flowField
     {
         for(const line of this.lines)
         {
+            line.age++
+            if(line.age > line.lifetime)
+            {
+                line.points.shift()
+                line.length--
+                if(line.length < 2) this.lines.shift()
+            }
+            
             // Remove point from start of line
-            if(line.points.length > this.params.lineLength)
+            if(line.points.length > line.length)
             {
                 line.points.shift()
             }
@@ -121,6 +123,7 @@ export default class flowField
                 line.points[line.points.length - 1].x * this.params.noiseScale,
                 line.points[line.points.length - 1].y * this.params.noiseScale,
                 line.points[line.points.length - 1].z * this.params.noiseScale
+                + this.time.elapsed * this.params.noiseSpeed
             ) * Math.PI * 2
             // Convert noise value to angle
             line.angle.set(Math.cos(noise), Math.sin(noise), Math.cos(noise))
@@ -131,7 +134,7 @@ export default class flowField
             )
             // Apply angle to line's direction
             line.vec3.applyEuler(line.angle)
-            line.vec3.multiplyScalar(this.params.pointFrequency)
+            line.vec3.multiplyScalar(line.speed)
             line.points.push(new THREE.Vector3(
                 line.points[line.points.length - 1].x + line.vec3.x,
                 line.points[line.points.length - 1].y + line.vec3.y,
