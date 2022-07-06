@@ -171,8 +171,8 @@ export default class flowField
             // Create new lines
             const lineGeo = new THREE.BufferGeometry().setFromPoints(line.points)
             const lineInstance = new MeshLine()
-            lineInstance.setGeometry(lineGeo)
-            // lineInstance.setPoints(lineGeo, p => 1 - p)
+            // lineInstance.setGeometry(lineGeo, p => 1 - Math.abs(2 * p - 1)) // Diamond
+            lineInstance.setGeometry(lineGeo, p => p * line.age / 50)
             const lineMesh = new THREE.Mesh(lineInstance, line.material)
             this.flowField.add(lineMesh)
         }
