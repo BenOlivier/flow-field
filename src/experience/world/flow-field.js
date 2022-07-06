@@ -1,10 +1,7 @@
 import * as THREE from 'three'
-import Experience from '../Experience.js'
-import PerlinNoise from '../Utils/PerlinNoise.js'
-import Noise from '../Utils/Noise.js'
-import SimplexNoise from 'simplex-noise'
-import { MeshLine, MeshLineMaterial, MeshLineRaycast } from 'three.meshline'
-import { getPalette } from '../Utils/color-palettes.js'
+import Experience from '../experience.js'
+import PerlinNoise from '../utils/perlin-noise.js'
+import { MeshLine, MeshLineMaterial } from 'three.meshline'
 
 function randomInRange(min, max) {
     return Math.random() * (max - min) + min
@@ -15,7 +12,7 @@ function createLine(_position, _material){
         points: [_position],
         angle: new THREE.Euler(0, 0, 0),
         vec3: new THREE.Vector3(0, 0, 0),
-        speed: 0.05,//randomInRange(0.02, 0.01),
+        speed: randomInRange(0.08, 0.02),
         length: 200,
         lifetime: 20,
         age: 0,
@@ -30,29 +27,20 @@ export default class flowField
     {
         this.experience = new Experience()
         this.perlinNoise = new PerlinNoise()
-        this.noise = new Noise()
-        const simplex = new SimplexNoise()
         this.scene = this.experience.scene
         this.sizes = this.experience.sizes
         this.time = this.experience.time
         this.camera = this.experience.camera
         this.debug = this.experience.debug
         this.pointer = this.experience.pointer
-        const palette = getPalette()
-        this.lineMats = [
-            new MeshLineMaterial({ color: palette[0], lineWidth: randomInRange(0.05, 0.2) }),
-            new MeshLineMaterial({ color: palette[1], lineWidth: randomInRange(0.05, 0.2) }),
-            new MeshLineMaterial({ color: palette[2], lineWidth: randomInRange(0.05, 0.2) }),
-            new MeshLineMaterial({ color: palette[3], lineWidth: randomInRange(0.05, 0.2) }),
-            new MeshLineMaterial({ color: palette[4], lineWidth: randomInRange(0.05, 0.2) }),
-            new MeshLineMaterial({ color: palette[5], lineWidth: randomInRange(0.05, 0.2) })
-        ]
 
         this.params = {
             sphereRadius: 0.2,
             noiseScale: 0.001,
             noiseSpeed: 0.001,
-            rotateSpeed: 0.0002
+            rotateSpeed: 0.0002,
+            minWidth: 0.02,
+            maxWidth: 0.1
         }
 
         if(this.debug.active)
@@ -71,6 +59,17 @@ export default class flowField
             this.debugFolder.add(this.params, 'particleDrag', 0.8, 1.00)
             this.debugFolder.addColor(this.params, 'particleColor')
         }
+
+        const colors = require('nice-color-palettes')
+        const palette = colors[Math.floor(Math.random() * 100)]
+        this.lineMats = [
+            new MeshLineMaterial({ color: palette[0], lineWidth: randomInRange(this.params.minWidth, this.params.maxWidth) }),
+            new MeshLineMaterial({ color: palette[1], lineWidth: randomInRange(this.params.minWidth, this.params.maxWidth) }),
+            new MeshLineMaterial({ color: palette[2], lineWidth: randomInRange(this.params.minWidth, this.params.maxWidth) }),
+            new MeshLineMaterial({ color: palette[3], lineWidth: randomInRange(this.params.minWidth, this.params.maxWidth) }),
+            new MeshLineMaterial({ color: palette[4], lineWidth: randomInRange(this.params.minWidth, this.params.maxWidth) }),
+            new MeshLineMaterial({ color: palette[5], lineWidth: randomInRange(this.params.minWidth, this.params.maxWidth) })
+        ]
 
         this.mouseVec = new THREE.Vector3(0, 0, 0)
         this.spawnPos = new THREE.Vector3(0, 0, 0)
@@ -147,13 +146,14 @@ export default class flowField
             if(line.points.length > line.length) line.points.shift()
 
             // Calculate noise value at last point
+            // const noise = 0
             const noise = this.perlinNoise.noise(
                 line.points[line.points.length - 1].x * this.params.noiseScale,
                 line.points[line.points.length - 1].y * this.params.noiseScale,
                 line.points[line.points.length - 1].z * this.params.noiseScale
                 + this.time.elapsed * this.params.noiseSpeed
             ) * Math.PI * 2
-            // Convert noise value to angle
+            // // Convert noise value to angle
             line.angle.set(Math.sin(noise), Math.sin(noise), Math.cos(noise))
             line.vec3.set(
                 line.points[line.points.length - 1].x - this.spawnPos.x,

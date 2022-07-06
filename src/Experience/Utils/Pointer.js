@@ -1,6 +1,6 @@
 import * as THREE from 'three'
-import EventEmitter from './EventEmitter.js'
-import Experience from '../Experience.js'
+import EventEmitter from './event-emitter.js'
+import Experience from '../experience.js'
 
 export default class Pointer extends EventEmitter
 {

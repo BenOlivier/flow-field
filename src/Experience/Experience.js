@@ -1,12 +1,12 @@
 import * as THREE from 'three'
-import Debug from './Utils/Debug.js'
-import Sizes from './Utils/Sizes.js'
-import Time from './Utils/Time.js'
-import Camera from './World/Camera.js'
-import Pointer from './Utils/Pointer.js'
-import Renderer from './Utils/Renderer.js'
-import FlowField from './World/FlowField.js'
 import Stats from 'stats.js'
+import Time from './utils/time.js'
+import Debug from './utils/debug.js'
+import Sizes from './utils/sizes.js'
+import Camera from './world/camera.js'
+import Pointer from './utils/pointer.js'
+import Renderer from './utils/renderer.js'
+import FlowField from './world/flow-field.js'
 
 let instance = null
 
@@ -35,7 +35,7 @@ export default class Experience
         this.camera = new Camera()
         this.pointer = new Pointer()
         this.renderer = new Renderer()
-        this.flowfield = new FlowField()
+        this.flowField = new FlowField()
         this.stats = new Stats()
         this.stats.showPanel(2)
         document.body.appendChild(this.stats.dom)
@@ -51,42 +51,9 @@ export default class Experience
         this.time.on('tick', () =>
         {
             this.stats.begin()
-            this.flowfield.update()
+            this.flowField.update()
             this.renderer.update()
             this.stats.end()
         })
-    }
-
-    destroy()
-    {
-        this.sizes.off('resize')
-        this.time.off('tick')
-
-        // Traverse the whole scene
-        this.scene.traverse((child) =>
-        {
-            // Test if it's a mesh
-            if(child instanceof THREE.Mesh)
-            {
-                child.geometry.dispose()
-
-                // Loop through the material properties
-                for(const key in child.material)
-                {
-                    const value = child.material[key]
-
-                    // Test if there is a dispose function
-                    if(value && typeof value.dispose === 'function')
-                    {
-                        value.dispose()
-                    }
-                }
-            }
-        })
-
-        this.renderer.instance.dispose()
-
-        if(this.debug.active)
-            this.debug.ui.destroy()
     }
 }
