@@ -4,20 +4,22 @@ import PerlinNoise from '../Utils/PerlinNoise.js'
 import Noise from '../Utils/Noise.js'
 import SimplexNoise from 'simplex-noise'
 import { MeshLine, MeshLineMaterial, MeshLineRaycast } from 'three.meshline'
+import { getPalette } from '../Utils/color-palettes.js'
 
 function randomInRange(min, max) {
     return Math.random() * (max - min) + min
 }
 
-function createLine(position){
+function createLine(_position, _material){
     const line = {
-        points: [position],
+        points: [_position],
         angle: new THREE.Euler(0, 0, 0),
         vec3: new THREE.Vector3(0, 0, 0),
         speed: randomInRange(0.05, 0.02),
         length: 50,
         lifetime: 20,
-        age: 0
+        age: 0,
+        material: _material
     }
     return line
 }
@@ -34,10 +36,15 @@ export default class flowField
         this.sizes = this.experience.sizes
         this.time = this.experience.time
         this.debug = this.experience.debug
-        this.lineMat = new MeshLineMaterial({
-            color: '#2289a1',
-            lineWidth: 0.1
-        })
+        const palette = getPalette()
+        this.lineMats = [
+            new MeshLineMaterial({ color: palette[0], lineWidth: 0.1 }),
+            new MeshLineMaterial({ color: palette[1], lineWidth: 0.1 }),
+            new MeshLineMaterial({ color: palette[2], lineWidth: 0.1 }),
+            new MeshLineMaterial({ color: palette[3], lineWidth: 0.1 }),
+            new MeshLineMaterial({ color: palette[4], lineWidth: 0.1 }),
+            new MeshLineMaterial({ color: palette[5], lineWidth: 0.1 })
+        ]
 
         this.params = {
             sphereRadius: 1,
@@ -71,7 +78,7 @@ export default class flowField
     update()
     {
         this.instanceTimer++
-        if(this.instanceTimer > 60 / 30)
+        if(this.instanceTimer > 60 / 3)
         {
             this.instanceTimer = 0
             this.instantiateLine()
@@ -85,7 +92,8 @@ export default class flowField
     {
         const randomDir = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5).normalize()
         const randomPos = randomDir.multiplyScalar(this.params.sphereRadius)
-        const line = createLine(new THREE.Vector3(randomPos.x , randomPos.y, randomPos.z))
+        const line = createLine(new THREE.Vector3(randomPos.x , randomPos.y, randomPos.z),
+            this.lineMats[Math.floor(Math.random() * this.lineMats.length)])
         this.lines.push(line)
     }
 
@@ -139,7 +147,7 @@ export default class flowField
             const lineInstance = new MeshLine()
             lineInstance.setGeometry(lineGeo)
             // lineInstance.setPoints(lineGeo, p => 1 - p)
-            const lineMesh = new THREE.Mesh(lineInstance, this.lineMat)
+            const lineMesh = new THREE.Mesh(lineInstance, line.material)
             this.flowField.add(lineMesh)
         }
     }
