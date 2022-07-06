@@ -78,7 +78,7 @@ export default class flowField
     update()
     {
         this.instanceTimer++
-        if(this.instanceTimer > 60 / 3)
+        if(this.instanceTimer > 60 / 60)
         {
             this.instanceTimer = 0
             this.instantiateLine()
@@ -100,7 +100,10 @@ export default class flowField
     disposePrevious()
     {
         this.flowField.children.forEach(function (child){
-            if(child instanceof THREE.Line) child.geometry.dispose()
+            if(child instanceof THREE.Mesh)
+            {
+                child.geometry.dispose()
+            }
         })
         this.flowField.remove(...this.flowField.children)
     }

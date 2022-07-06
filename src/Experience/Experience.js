@@ -6,6 +6,7 @@ import Camera from './World/Camera.js'
 import Pointer from './Utils/Pointer.js'
 import Renderer from './Utils/Renderer.js'
 import FlowField from './World/FlowField.js'
+import Stats from 'stats.js'
 
 let instance = null
 
@@ -35,6 +36,9 @@ export default class Experience
         this.pointer = new Pointer()
         this.renderer = new Renderer()
         this.flowfield = new FlowField()
+        this.stats = new Stats()
+        this.stats.showPanel(2)
+        document.body.appendChild(this.stats.dom)
 
         // Resize event
         this.sizes.on('resize', () =>
@@ -46,8 +50,10 @@ export default class Experience
         // Time tick event
         this.time.on('tick', () =>
         {
+            this.stats.begin()
             this.flowfield.update()
             this.renderer.update()
+            this.stats.end()
         })
     }
 
