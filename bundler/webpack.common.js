@@ -5,6 +5,12 @@ const path = require('path')
 
 module.exports = {
     entry: path.resolve(__dirname, '../src/script.js'),
+    resolve: {
+        alias: {
+            three: path.resolve('./node_modules/three')
+        },
+        extensions: ['.tsx', '.ts', '.js'],
+    },
     output:
     {
         hashFunction: 'xxhash64',

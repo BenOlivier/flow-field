@@ -3,16 +3,17 @@ import Experience from '../experience.js'
 import PerlinNoise from '../utils/perlin-noise.js'
 import { MeshLine, MeshLineMaterial } from 'three.meshline'
 
-function randomInRange(min, max) {
-    return Math.random() * (max - min) + min
+function randomInRange(_min, _max) {
+    return Math.random() * (_min - _max) + _min
 }
 
-function createLine(_position, _material){
+function createLine(_position, _origin, _material){
     const line = {
         points: [_position],
         angle: new THREE.Euler(0, 0, 0),
         vec3: new THREE.Vector3(0, 0, 0),
-        speed: randomInRange(0.08, 0.02),
+        speed: randomInRange(0.04, 0.01),
+        origin: _origin,
         length: 200,
         lifetime: 20,
         age: 0,
@@ -35,12 +36,13 @@ export default class flowField
         this.pointer = this.experience.pointer
 
         this.params = {
+            spawnRate: 1,
             sphereRadius: 0.2,
             noiseScale: 0.001,
             noiseSpeed: 0.001,
             rotateSpeed: 0.0002,
-            minWidth: 0.02,
-            maxWidth: 0.1
+            minWidth: 0.1,
+            maxWidth: 0.2
         }
 
         if(this.debug.active)
@@ -67,8 +69,7 @@ export default class flowField
             new MeshLineMaterial({ color: palette[1], lineWidth: randomInRange(this.params.minWidth, this.params.maxWidth) }),
             new MeshLineMaterial({ color: palette[2], lineWidth: randomInRange(this.params.minWidth, this.params.maxWidth) }),
             new MeshLineMaterial({ color: palette[3], lineWidth: randomInRange(this.params.minWidth, this.params.maxWidth) }),
-            new MeshLineMaterial({ color: palette[4], lineWidth: randomInRange(this.params.minWidth, this.params.maxWidth) }),
-            new MeshLineMaterial({ color: palette[5], lineWidth: randomInRange(this.params.minWidth, this.params.maxWidth) })
+            new MeshLineMaterial({ color: palette[4], lineWidth: randomInRange(this.params.minWidth, this.params.maxWidth) })
         ]
 
         this.mouseVec = new THREE.Vector3(0, 0, 0)
@@ -84,22 +85,21 @@ export default class flowField
         this.lines = []
         this.flowField = new THREE.Object3D()
         this.scene.add(this.flowField)
-        this.instanceTimer = 0
     }
 
     update()
     {
-        this.instanceTimer++
-        if(this.instanceTimer > 60 / 60)
+        for(let i = 0; i < this.params.spawnRate; i++)
         {
-            this.instanceTimer = 0
             if(this.generateParticles) this.instantiateLine()
         }
 
         // this.flowField.rotation.y += this.time.delta * this.params.rotateSpeed
-        
-        this.disposePrevious()
-        this.calculateNextPoints()
+        if(this.lines.length > 0)
+        {
+            this.disposePrevious()
+            this.calculateNextPoints()
+        }
     }
 
     instantiateLine()
@@ -114,7 +114,7 @@ export default class flowField
         const line = createLine(new THREE.Vector3(
             this.spawnPos.x + randomPos.x,
             this.spawnPos.y + randomPos.y,
-            this.spawnPos.z + randomPos.z),
+            this.spawnPos.z + randomPos.z), this.spawnPos,
             this.lineMats[Math.floor(Math.random() * this.lineMats.length)])
         this.lines.push(line)
     }
@@ -146,20 +146,23 @@ export default class flowField
             if(line.points.length > line.length) line.points.shift()
 
             // Calculate noise value at last point
-            // const noise = 0
-            const noise = this.perlinNoise.noise(
-                line.points[line.points.length - 1].x * this.params.noiseScale,
-                line.points[line.points.length - 1].y * this.params.noiseScale,
-                line.points[line.points.length - 1].z * this.params.noiseScale
-                + this.time.elapsed * this.params.noiseSpeed
-            ) * Math.PI * 2
+            const noise = 0
+            // const noise = this.perlinNoise.noise(
+            //     line.points[line.points.length - 1].x * this.params.noiseScale,
+            //     line.points[line.points.length - 1].y * this.params.noiseScale,
+            //     line.points[line.points.length - 1].z * this.params.noiseScale
+            //     + this.time.elapsed * this.params.noiseSpeed
+            // ) * Math.PI * 2
             // // Convert noise value to angle
             line.angle.set(Math.sin(noise), Math.sin(noise), Math.cos(noise))
+            console.log(this.lines[5].origin)
             line.vec3.set(
-                line.points[line.points.length - 1].x - this.spawnPos.x,
-                line.points[line.points.length - 1].y - this.spawnPos.y,
-                line.points[line.points.length - 1].z - this.spawnPos.z
+                line.points[line.points.length - 1].x - line.origin.x,
+                line.points[line.points.length - 1].y - line.origin.y,
+                line.points[line.points.length - 1].z - line.origin.z
             )
+            // console.log(line.points[line.points.length - 1])
+            
             // Apply angle to line's direction
             line.vec3.applyEuler(line.angle)
             line.vec3.multiplyScalar(line.speed)
