@@ -20,6 +20,7 @@ export default class Pointer extends EventEmitter
         {
             this.pointerPos.x = event.clientX / this.sizes.width * 2 - 1
             this.pointerPos.y = -(event.clientY / this.sizes.height) * 2 + 1
+            this.trigger('pointerdown')
         })
 
         // Pointer move event
@@ -27,6 +28,13 @@ export default class Pointer extends EventEmitter
         {
             this.pointerPos.x = event.clientX / this.sizes.width * 2 - 1
             this.pointerPos.y = -(event.clientY / this.sizes.height) * 2 + 1
+            this.trigger('pointermove')
+        })
+
+        // Pointer up event
+        window.addEventListener('pointerup', (event) =>
+        {
+            this.trigger('pointerup')
         })
     }
 }
