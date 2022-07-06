@@ -12,15 +12,19 @@ export default class flowField
         this.experience = new Experience()
         this.perlinNoise = new PerlinNoise()
         this.noise = new Noise()
+        const simplex = new SimplexNoise()
         this.scene = this.experience.scene
         this.sizes = this.experience.sizes
         this.time = this.experience.time
         this.debug = this.experience.debug
+        this.lineMat = new THREE.LineBasicMaterial( { color: 0x00ff00 } )
 
         this.params = {
-            linesCount: 10,
-            sphereRadius: 5,
-            noiseScale: 0.001,
+            gridSize: 1,
+            gridStep: 0.25,
+            lineSpeed: 20,
+            lineLength: 10,
+            noiseScale: 0.5,
             pointFrequency: 0.1
         }
 
@@ -41,11 +45,6 @@ export default class flowField
             this.debugFolder.addColor(this.params, 'particleColor')
         }
 
-        const simplex = new SimplexNoise()
-        // value2d = simplex.noise2D(x, y),
-        // value3d = simplex.noise3D(x, y, z),
-        // value4d = simplex.noise4D(x, y, z, w);
-
         this.lines = []
         this.flowField = new THREE.Object3D()
         this.scene.add(this.flowField)
@@ -61,53 +60,87 @@ export default class flowField
         }
 
         // Instantiate lines
-        // for(let i = 0; i < this.params.linesCount; i++)
-        // {
-        //     const direction = new THREE.Vector3(
-        //         Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize()
-        //     const position = direction.multiplyScalar(this.params.sphereRadius)
-        //     const line = CreateLine(position)
-        //     this.lines.push(line)
-        // }
-        for (let z = -1; z < 1; z += 0.2) {
-            for (let y = -1; y < 1; y += 0.2) {
-                for (let x = -1; x < 1; x += 0.2) {
+        for (let z = -this.params.gridSize;
+            z < this.params.gridSize;
+            z += this.params.gridStep)
+        {
+            for (let y = -this.params.gridSize;
+                y < this.params.gridSize;
+                y += this.params.gridStep)
+            {
+                for (let x = -this.params.gridSize;
+                    x < this.params.gridSize;
+                    x += this.params.gridStep)
+                {
                     const line = CreateLine(new THREE.Vector3(x, y, z))
                     this.lines.push(line)
                 }
             }
         }
 
-        for(const line of this.lines)
-        {
-            const positions = []
-            for(let i = 0; i < line.length; i ++)
-            {
-                const noise = simplex.noise3D(
-                    line.points[i].x * this.params.noiseScale,
-                    line.points[i].y * this.params.noiseScale,
-                    line.points[i].z * this.params.noiseScale
-                ) * Math.PI * 16
-
-                line.angle.set(Math.cos(noise), Math.sin(noise), Math.cos(noise))
-                line.vec3.set(line.points[i].x, line.points[i].y, line.points[i].z)
-                line.vec3.applyEuler(line.angle)
-                line.vec3.multiplyScalar(this.params.pointFrequency)
-                line.points.push(new THREE.Vector3(
-                    line.points[i].x + line.vec3.x,
-                    line.points[i].y + line.vec3.y,
-                    line.points[i].z + line.vec3.z
-                ))
-            }
-            const lineGeo = new THREE.BufferGeometry().setFromPoints(line.points)
-            const lineMat = new THREE.LineBasicMaterial( { color: 0x00ff00 } )
-            const lineMesh = new THREE.Line( lineGeo, lineMat )
-            this.flowField.add(lineMesh)
-        }
+        this.frame = 0
+        this.total = 0
     }
 
     update()
     {
+        this.frame++
+        if(this.frame > 60 / this.params.lineSpeed)
+        {
+            this.frame = 0
+            this.total++
+            this.disposePrevious()
+            this.calculateNextPoints()
+        }
         
+    }
+
+    disposePrevious()
+    {
+        this.flowField.children.forEach(function (child) //TODO:
+        {
+            if(child instanceof THREE.Line)
+            {
+                child.geometry.dispose()
+            }
+        })
+        this.flowField.remove(...this.flowField.children)
+    }
+
+    calculateNextPoints()
+    {
+        for(const line of this.lines)
+        {
+            // Remove point from start of line
+            if(line.points.length > this.params.lineLength)
+            {
+                line.points.shift()
+            }
+            // Calculate noise value at last point
+            const noise = this.perlinNoise.noise(
+                line.points[line.points.length - 1].x * this.params.noiseScale,
+                line.points[line.points.length - 1].y * this.params.noiseScale,
+                line.points[line.points.length - 1].z * this.params.noiseScale
+            ) * Math.PI * 2
+            // Convert noise value to angle
+            line.angle.set(Math.cos(noise), Math.sin(noise), Math.cos(noise))
+            line.vec3.set(
+                line.points[line.points.length - 1].x,
+                line.points[line.points.length - 1].y,
+                line.points[line.points.length - 1].z
+            )
+            // Apply angle to line's direction
+            line.vec3.applyEuler(line.angle)
+            line.vec3.multiplyScalar(this.params.pointFrequency)
+            line.points.push(new THREE.Vector3(
+                line.points[line.points.length - 1].x + line.vec3.x,
+                line.points[line.points.length - 1].y + line.vec3.y,
+                line.points[line.points.length - 1].z + line.vec3.z
+            ))
+            // Create new lines
+            const lineGeo = new THREE.BufferGeometry().setFromPoints(line.points)
+            const lineMesh = new THREE.Line( lineGeo, this.lineMat )
+            this.flowField.add(lineMesh)
+        }
     }
 }
