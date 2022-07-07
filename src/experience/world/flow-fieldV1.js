@@ -146,31 +146,26 @@ export default class flowField
             if(line.points.length > line.length) line.points.shift()
 
             // Calculate noise value at last point
-            const noise = 0
-            // const noise = this.perlinNoise.noise(
-            //     line.points[line.points.length - 1].x * this.params.noiseScale,
-            //     line.points[line.points.length - 1].y * this.params.noiseScale,
-            //     line.points[line.points.length - 1].z * this.params.noiseScale
-            //     + this.time.elapsed * this.params.noiseSpeed
-            // ) * Math.PI * 2
-
+            // const noise = 0
+            const noise = this.perlinNoise.noise(
+                line.points[line.points.length - 1].x * this.params.noiseScale,
+                line.points[line.points.length - 1].y * this.params.noiseScale,
+                line.points[line.points.length - 1].z * this.params.noiseScale
+                + this.time.elapsed * this.params.noiseSpeed
+            ) * Math.PI * 2
             // // Convert noise value to angle
-            line.angle.set(0, 0, 0)
-            // line.angle.set(Math.sin(noise), Math.sin(noise), Math.cos(noise))
-
+            line.angle.set(Math.sin(noise), Math.sin(noise), Math.cos(noise))
             // line.vec3.set(
-            //     line.points[line.points.length - 1].x - this.spawnPos.x,
-            //     line.points[line.points.length - 1].y - this.spawnPos.y,
-            //     line.points[line.points.length - 1].z - this.spawnPos.z
+            //     line.points[line.points.length - 1].x - line.origin.x,
+            //     line.points[line.points.length - 1].y - line.origin.y,
+            //     line.points[line.points.length - 1].z - line.origin.z
             // )
 
             line.vec3.set(
-                line.points[line.points.length - 1].x - line.origin.x,
-                line.points[line.points.length - 1].y - line.origin.y,
-                line.points[line.points.length - 1].z - line.origin.z
+                line.points[line.points.length - 1].x - this.spawnPos.x,
+                line.points[line.points.length - 1].y - this.spawnPos.y,
+                line.points[line.points.length - 1].z - this.spawnPos.z
             )
-            // console.log(line.origin)
-            
             
             // Apply angle to line's direction
             line.vec3.applyEuler(line.angle)
