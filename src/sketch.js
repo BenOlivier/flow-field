@@ -1,3 +1,6 @@
+// Based on vector-field by Varun Vachhar
+// https://github.com/winkerVSbecks/sketchbook/blob/master/colour-field.js
+
 import './style.css';
 
 const canvasSketch = require('canvas-sketch');
