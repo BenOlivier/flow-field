@@ -3,9 +3,8 @@ import './style.css';
 const canvasSketch = require('canvas-sketch');
 const lerp = require('lerp');
 const SimplexNoise = require('simplex-noise');
-const chroma = require('chroma-js');
 
-const simplex = new SimplexNoise('81234n32478320');
+const simplex = new SimplexNoise();
 
 const settings = {
     animate: true,
@@ -19,21 +18,19 @@ const colors = {
     white: '#ffffff',
 };
 
-const colourScale = chroma.scale([colors.gray[1],
-    colors.blue, colors.red]).domain([-1, 1]);
-
 canvasSketch(() =>
 {
-    return ({ context, frame, width, height, playhead }) =>
+    return ({ context, width, height, playhead }) =>
     {
         context.clearRect(0, 0, width, height);
         context.fillStyle = colors.gray[0];
         context.fillRect(0, 0, width, height);
 
-        const gridSize = [30, 20];
         const padding = 100;
+        const density = 40;
+        const gridSize = [width / density, height / density];
         const tileSize = (width - padding * 2) / gridSize[0];
-        const length = tileSize * 0.65;
+        const length = tileSize * 0.5;
         const thickness = 2;
         const time = Math.sin(playhead * 2 * Math.PI);
 
@@ -42,8 +39,8 @@ canvasSketch(() =>
             for (let y = 0; y < gridSize[1]; y++)
             {
                 // get a 0..1 UV coordinate
-                const u = gridSize[0] <= 1 ? 0.5 : x / (gridSize[0] - 1);
-                const v = gridSize[1] <= 1 ? 0.5 : y / (gridSize[1] - 1);
+                const u = x / (gridSize[0] - 1);
+                const v = y / (gridSize[1] - 1);
 
                 // scale to dimensions with a border padding
                 const t = {
