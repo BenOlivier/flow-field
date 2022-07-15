@@ -1,5 +1,5 @@
-import './style.css'
+import './style.css';
 
-import Experience from './experience/experience.js'
+import Experience from './three-js/experience.js';
 
-const experience = new Experience(document.querySelector('canvas.webgl'))
+new Experience(document.querySelector('canvas'));

@@ -18,9 +18,10 @@
     "ip": "^1.1.5",
     "lil-gui": "^0.16.0",
     "mini-css-extract-plugin": "^2.5.3",
-    "nice-color-palettes": "^3.0.0",
+    "nice-color-palettes": "^2.0.0",
     "portfinder-sync": "0.0.2",
     "raw-loader": "^4.0.2",
+    "simplex-noise": "^3.0.1",
     "stats.js": "^0.17.0",
     "style-loader": "^3.3.1",
     "three": "^0.137.5",
@@ -29,5 +30,9 @@
     "webpack-cli": "^4.9.2",
     "webpack-dev-server": "^4.7.3",
     "webpack-merge": "^5.8.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.19.0",
+    "eslint-config-google": "^0.14.0"
   }
 }
