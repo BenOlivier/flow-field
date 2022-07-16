@@ -5,8 +5,10 @@ import './style.css';
 
 const canvasSketch = require('canvas-sketch');
 const SimplexNoise = require('simplex-noise');
+const FastPoissonDiskSampling = require('fast-2d-poisson-disk-sampling');
+const { clipPolylinesToBox } = require('canvas-sketch-util/geometry');
+const { mapRange } = require('canvas-sketch-util/math');
 const lerp = require('lerp');
-
 const simplex = new SimplexNoise();
 
 const settings = {
@@ -16,10 +18,14 @@ const settings = {
 
 const colors = {
     red: '#da3900',
-    blue: '#e1e9ee',
+    blue: '#5555ff',
     black: '#111111',
     white: '#ffffff',
 };
+
+const damping = 0.1;
+const step = 10;
+const particleSteps = 60;
 
 canvasSketch(() =>
 {
@@ -30,12 +36,11 @@ canvasSketch(() =>
         context.fillRect(0, 0, width, height);
 
         const padding = 100;
-        const density = 40;
-        const gridSize = [width / density, height / density];
+        const gridDensity = 40;
+        const gridSize = [width / gridDensity, height / gridDensity];
         const tileSize = (width - padding * 2) / gridSize[0];
-        const length = tileSize * 0.5;
-        const thickness = 2;
-        // const time = Math.sin(playhead * 2 * Math.PI);
+        const vectorLength = tileSize * 0.5;
+        const vectorThickness = 2;
         const time = playhead;
 
         for (let x = 0; x < gridSize[0]; x++)
@@ -65,9 +70,25 @@ canvasSketch(() =>
                 context.translate(-uv.x, -uv.y);
 
                 // Draw the line
-                context.fillRect(uv.x, uv.y - thickness, length, thickness);
+                context.fillRect(uv.x, uv.y - vectorThickness, vectorLength, vectorThickness);
                 context.restore();
             }
+        }
+
+        // Generate evenly distributed starting points
+        const poisson = new FastPoissonDiskSampling({
+            shape: [width, height],
+            radius: 20,
+            tries: 20,
+        });
+        const points = poisson.fill();
+
+        for (const point of points)
+        {
+            context.save();
+            context.fillStyle = colors.blue;
+            context.fillRect(point[0], point[1], 4, 4);
+            context.restore();
         }
     };
 }, settings);
