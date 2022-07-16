@@ -17,8 +17,9 @@ const poisson = new FastPoissonDiskSampling({
 });
 
 const settings = {
-    // animate: true,
+    animate: true,
     duration: 5,
+    loop: false,
 };
 
 const colors = {
@@ -28,11 +29,11 @@ const colors = {
     white: '#ffffff',
 };
 
+const padding = 100;
 const debug = true;
 const damping = 0.1;
 const step = 10;
 const particleSteps = 60;
-
 const sketch = () =>
 {
     let particles = [];
@@ -42,7 +43,18 @@ const sketch = () =>
         begin()
         {
             // Generate evenly distributed starting points
-            particles = poisson.fill();
+            const points = poisson.fill();
+            for (let i = 0; i < points.length; i++)
+            {
+                particles.push({
+                    x: points[i][0],
+                    y: points[i][1],
+                    vx: 0,
+                    vy: 0,
+                    line: [],
+                    color: colors.blue,
+                });
+            }
         },
         render({ context, width, height, playhead })
         {
@@ -50,19 +62,84 @@ const sketch = () =>
             context.fillStyle = colors.black;
             context.fillRect(0, 0, width, height);
 
+            const clipBox = [
+                [padding, padding],
+                [width - padding, height - padding],
+            ];
+
             if (debug)
             {
                 drawVectorField(context, width, height);
             }
+
+            stepsTaken = Math.floor(mapRange(playhead, 0, 1, 0, particleSteps));
+            if (particles[0].line.length < particleSteps)
+            {
+                particles.forEach((particle) =>
+                {
+                    moveParticle(particle);
+                });
+            }
+            else
+            {
+
+            }
+
+            const lines = particles.map((particle) => particle.line);
+            const clippedLines = clipPolylinesToBox(lines, clipBox, false, false);
+
+            context.lineWidth = 1;
+            context.lineJoin = 'round';
+            context.lineCap = 'round';
+
+            clippedLines.forEach((line, index) =>
+            {
+                const [start, ...pts] = line;
+
+                context.beginPath();
+                context.moveTo(...start);
+                pts.forEach((pt) =>
+                {
+                    context.lineTo(...pt);
+                });
+
+                context.strokeStyle = particles[index].color;
+                context.stroke();
+            });
         },
     };
 };
 
 canvasSketch(sketch, settings);
 
+function moveParticle(particle)
+{
+    // Calculate UV position
+    const uvPos = [
+        particle.x / window.innerWidth,
+        particle.y / window.innerHeight,
+    ];
+
+    // Calculate direction from noise
+    const value = simplex.noise2D(uvPos[0], uvPos[1]);
+
+    // Update the velocity of the particle
+    particle.vx += Math.cos(value) * step;
+    particle.vy += Math.sin(value) * step;
+
+    // Move the particle
+    particle.x += particle.vx;
+    particle.y += particle.vy;
+
+    // Use damping to slow down the particle (think friction)
+    particle.vx *= damping;
+    particle.vy *= damping;
+
+    particle.line.push([particle.x, particle.y]);
+}
+
 function drawVectorField(context, width, height)
 {
-    const padding = 100;
     const gridDensity = 40;
     const gridSize = [width / gridDensity, height / gridDensity];
     const tileSize = (width - padding * 2) / gridSize[0];
