@@ -1,26 +1,32 @@
 // Based on flow-field by Varun Vachhar
 // https://github.com/winkerVSbecks/sketchbook/blob/master/flow-field.js
 
+import { LineLoop } from 'three';
 import './style.css';
 
 const canvasSketch = require('canvas-sketch');
 const SimplexNoise = require('simplex-noise');
 const FastPoissonDiskSampling = require('fast-2d-poisson-disk-sampling');
 const { clipPolylinesToBox } = require('canvas-sketch-util/geometry');
-const { mapRange } = require('canvas-sketch-util/math');
-const lerp = require('lerp');
+// const { mapRange } = require('canvas-sketch-util/math');
+// const lerp = require('lerp');
 const simplex = new SimplexNoise();
 const poisson = new FastPoissonDiskSampling({
     shape: [window.innerWidth, window.innerHeight],
-    radius: 20,
+    radius: 150,
     tries: 20,
 });
 
-const settings = {
-    animate: true,
-    duration: 5,
-    loop: false,
-};
+// class Rectangle
+// {
+//     constructor(x, y, w, h)
+//     {
+//         this.x = x;
+//         this.y = y;
+//         this.w = w;
+//         this.h = h;
+//     }
+// }
 
 const colors = {
     red: '#da3900',
@@ -29,69 +35,93 @@ const colors = {
     white: '#ffffff',
 };
 
+// Sketch settings
+const settings = {
+    animate: true,
+    duration: 5,
+    loop: false,
+};
+
 const padding = 100;
-const debug = true;
+const stepDistance = 10;
+const numSteps = 50;
 const damping = 0.1;
-const step = 10;
-const particleSteps = 60;
+const lineWidth = 5;
+const minDistance = 50;
+
 const sketch = () =>
 {
-    let particles = [];
+    const lines = [];
     let stepsTaken = 0;
 
     return {
         begin()
         {
             // Generate evenly distributed starting points
-            const points = poisson.fill();
-            for (let i = 0; i < points.length; i++)
+            const startingPoints = poisson.fill();
+            // Fill lines array with line objects
+            for (let i = 0; i < startingPoints.length; i++)
             {
-                particles.push({
-                    x: points[i][0],
-                    y: points[i][1],
-                    vx: 0,
-                    vy: 0,
-                    line: [],
-                    color: colors.blue,
+                lines.push({
+                    x: startingPoints[i][0],
+                    y: startingPoints[i][1],
+                    velocityX: 0,
+                    velocityY: 0,
+                    points: [],
+                    color: colors.white,
                 });
             }
+            // Discard poisson array
+            startingPoints.length = 0;
         },
         render({ context, width, height, playhead })
         {
+            // Clear canvas then fill background
             context.clearRect(0, 0, width, height);
             context.fillStyle = colors.black;
             context.fillRect(0, 0, width, height);
 
+            // If steps are not complete
+            if (stepsTaken < numSteps)
+            {
+                let index = 0;
+                lines.forEach((line) =>
+                {
+                    // If this line has not been stopped
+                    if (line.points.length === stepsTaken)
+                    {
+                        // If the current position is not to close to other points
+                        if (checkProximity(line.x, line.y, lines) === true)
+                        {
+                            extendLine(line, width, height);
+                        }
+                        else
+                        {
+                            // console.log('too close!');
+                        }
+                    }
+                    if (line.points.length === 0) // TODO: Delete
+                    {
+                        lines.splice(index, 1);
+                    }
+                    index++;
+                });
+            }
+
+            // Define clip box
             const clipBox = [
                 [padding, padding],
                 [width - padding, height - padding],
             ];
+            // Clip lines to box
+            const polylines = lines.map((line) => line.points);
+            const clippedLines = clipPolylinesToBox(polylines, clipBox, false, false);
 
-            if (debug)
-            {
-                drawVectorField(context, width, height);
-            }
-
-            stepsTaken = Math.floor(mapRange(playhead, 0, 1, 0, particleSteps));
-            if (particles[0].line.length < particleSteps)
-            {
-                particles.forEach((particle) =>
-                {
-                    moveParticle(particle);
-                });
-            }
-            else
-            {
-
-            }
-
-            const lines = particles.map((particle) => particle.line);
-            const clippedLines = clipPolylinesToBox(lines, clipBox, false, false);
-
-            context.lineWidth = 1;
+            context.lineWidth = lineWidth;
             context.lineJoin = 'round';
             context.lineCap = 'round';
 
+            // Draw lines
             clippedLines.forEach((line, index) =>
             {
                 const [start, ...pts] = line;
@@ -103,78 +133,56 @@ const sketch = () =>
                     context.lineTo(...pt);
                 });
 
-                context.strokeStyle = particles[index].color;
+                context.strokeStyle = lines[index].color;
                 context.stroke();
             });
+            stepsTaken++;
         },
     };
 };
 
 canvasSketch(sketch, settings);
 
-function moveParticle(particle)
+function checkProximity(x, y, lines)
 {
-    // Calculate UV position
-    const uvPos = [
-        particle.x / window.innerWidth,
-        particle.y / window.innerHeight,
-    ];
+    // For each point in the vicinity
+    // lines.forEach((p) =>
+    // {
+    //     // If distance between [x,y] and point > minDistance return true
+    // });
+    const pointX = window.innerWidth / 2;
+    const pointY = window.innerHeight / 2;
 
-    // Calculate direction from noise
-    const value = simplex.noise2D(uvPos[0], uvPos[1]);
-
-    // Update the velocity of the particle
-    particle.vx += Math.cos(value) * step;
-    particle.vy += Math.sin(value) * step;
-
-    // Move the particle
-    particle.x += particle.vx;
-    particle.y += particle.vy;
-
-    // Use damping to slow down the particle (think friction)
-    particle.vx *= damping;
-    particle.vy *= damping;
-
-    particle.line.push([particle.x, particle.y]);
+    const distance = getDistance(x, y, pointX, pointY);
+    if (distance > minDistance)
+    {
+        return true;
+    }
 }
 
-function drawVectorField(context, width, height)
+function getDistance(x1, y1, x2, y2)
 {
-    const gridDensity = 40;
-    const gridSize = [width / gridDensity, height / gridDensity];
-    const tileSize = (width - padding * 2) / gridSize[0];
-    const vectorLength = tileSize * 0.5;
-    const vectorThickness = 2;
+    const x = x2 - x1;
+    const y = y2 - y1;
+    return Math.sqrt(x * x + y * y);
+}
 
-    for (let x = 0; x < gridSize[0]; x++)
-    {
-        for (let y = 0; y < gridSize[1]; y++)
-        {
-            // get a 0-1 UV coordinate
-            const u = x / (gridSize[0] - 1);
-            const v = y / (gridSize[1] - 1);
+function extendLine(line, width, height)
+{
+    // Calculate noise value at position
+    const value = simplex.noise2D(line.x / width, line.y / height);
 
-            // scale to dimensions with a border padding
-            const uv = {
-                x: lerp(padding, width - padding, u),
-                y: lerp(padding, height - padding, v),
-            };
+    // Update the velocity of the particle
+    line.velocityX += Math.cos(value) * stepDistance;
+    line.velocityY += Math.sin(value) * stepDistance;
 
-            // Draw
-            context.save();
-            context.fillStyle = colors.white;
+    // Move the particle
+    line.x += line.velocityX;
+    line.y += line.velocityY;
 
-            const rotation = simplex.noise3D(x / gridSize[0],
-                y / gridSize[1], 0) * Math.PI;
+    // Use damping to slow down the particle (think friction)
+    line.velocityX *= damping;
+    line.velocityY *= damping;
 
-            // Rotate in place
-            context.translate(uv.x, uv.y);
-            context.rotate(rotation);
-            context.translate(-uv.x, -uv.y);
-
-            // Draw the line
-            context.fillRect(uv.x, uv.y - vectorThickness, vectorLength, vectorThickness);
-            context.restore();
-        }
-    }
+    line.points.push([line.x, line.y]);
 }
