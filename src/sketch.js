@@ -10,9 +10,12 @@ const { clipPolylinesToBox } = require('canvas-sketch-util/geometry');
 const simplex = new SimplexNoise();
 const poisson = new FastPoissonDiskSampling({
     shape: [window.innerWidth, window.innerHeight],
-    radius: 50,
+    radius: 25,
     tries: 20,
 });
+
+const lines = [];
+let startPoints = [];
 
 const colors = {
     red: '#da3900',
@@ -29,38 +32,25 @@ const settings = {
 };
 
 const padding = 100;
-const stepDistance = 10;
-const numSteps = 50;
-// const minLength = 10;
+const numIterations = 8;
+const stepDistance = 8;
+const numSteps = 20;
+const minLength = 4;
 const damping = 0.1;
-const lineWidth = 5;
-const margin = 20;
-const scale = 1;
+const lineWidth = 3;
+const margin = 15;
+const scale = 0.5;
+const turbulence = 0.8;
 
 const sketch = () =>
 {
-    const lines = [];
     let stepsTaken = 0;
+    let iterations = 0;
 
     return {
         begin()
         {
-            // Generate evenly distributed starting points
-            const startingPoints = poisson.fill();
-            // Fill lines array with line objects
-            for (let i = 0; i < startingPoints.length; i++)
-            {
-                lines.push({
-                    x: startingPoints[i][0],
-                    y: startingPoints[i][1],
-                    velocityX: 0,
-                    velocityY: 0,
-                    points: [],
-                    color: colors.white,
-                });
-            }
-            // Discard poisson array
-            startingPoints.length = 0;
+            generateStartPoints();
         },
         render({ context, width, height, playhead })
         {
@@ -105,6 +95,26 @@ const sketch = () =>
                     }
                 });
             }
+            else
+            {
+                if(iterations < numIterations)
+                {
+                    let index = 0;
+                    lines.forEach((line) =>
+                    {
+                        // If this line is under minimum length
+                        if (line.points.length < minLength)
+                        {
+                            // Remove line
+                            lines.splice(index, 1);
+                        }
+                        index++;
+                    });
+                    generateStartPoints();
+                    stepsTaken = 0;
+                    iterations++;
+                }
+            }
 
             // Clear canvas and fill background
             context.clearRect(0, 0, width, height);
@@ -121,13 +131,32 @@ const sketch = () =>
     };
 };
 
+function generateStartPoints()
+{
+    // Generate evenly distributed starting points
+    startPoints = poisson.fill();
+    // Fill lines array with line objects
+    for (let i = 0; i < startPoints.length; i++)
+    {
+        lines.push({
+            x: startPoints[i][0],
+            y: startPoints[i][1],
+            velocityX: 0,
+            velocityY: 0,
+            points: [[startPoints[i][0], startPoints[i][1]]],
+            color: colors.white,
+        });
+    }
+    // Discard poisson array
+    startPoints = poisson.reset();
+}
+
 function drawLines(context, clippedLines, width)
 {
     context.lineWidth = width;
     clippedLines.forEach((line) =>
     {
         const [start, ...pts] = line;
-        // Lines
         context.beginPath();
         context.moveTo(...start);
         pts.forEach((pt) =>
@@ -143,7 +172,7 @@ function extendLine(line, width, height)
 {
     // Calculate noise value at position
     const value = simplex.noise2D(line.x / width * scale,
-        line.y / height * scale);
+        line.y / height * scale) * turbulence;
 
     // Update the velocity of the particle
     line.velocityX += Math.cos(value) * stepDistance;
@@ -160,16 +189,12 @@ function extendLine(line, width, height)
 
 function checkProximity(x, y, context)
 {
+    // Get pixel color at point position
     const pixelData = context.getImageData(x, y, 1, 1).data;
-    console.log(pixelData);
-
+    // If pixel is not on margin line there is space
     if (pixelData[0] !== 255)
     {
         return true;
-    }
-    else
-    {
-        console.log('too close!');
     }
 }
 
