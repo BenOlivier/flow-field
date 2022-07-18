@@ -17,12 +17,13 @@ const poisson = new FastPoissonDiskSampling({
 const lines = [];
 let startPoints = [];
 
-const colors = {
-    red: '#da3900',
-    blue: '#5555ff',
-    black: '#111111',
-    white: '#ffffff',
-};
+const colors = [
+    '#12c2e9',
+    '#c471ed',
+    '#c471ed',
+    '#c471ed',
+    '#f64f59',
+];
 
 // Sketch settings
 const settings = {
@@ -32,13 +33,13 @@ const settings = {
 };
 
 const padding = 100;
-const numIterations = 8;
+const numIterations = 20;
 const stepDistance = 8;
-const numSteps = 20;
+const numSteps = 10;
 const minLength = 4;
 const damping = 0.1;
 const lineWidth = 3;
-const margin = 15;
+const margin = 12;
 const scale = 0.5;
 const turbulence = 0.8;
 
@@ -56,7 +57,7 @@ const sketch = () =>
         {
             // Clear canvas and fill background
             context.clearRect(0, 0, width, height);
-            context.fillStyle = colors.black;
+            context.fillStyle = '#000000';
             context.fillRect(0, 0, width, height);
 
             // Set line paramaters
@@ -71,11 +72,10 @@ const sketch = () =>
 
             if (stepsTaken > 0)
             {
-                // Clip lines to box
+                // Create margin polylines
                 const polylines = lines.map((line) => line.points);
-                const clippedLines = clipPolylinesToBox(polylines, clipBox, false, false);
-
-                drawLines(context, clippedLines, margin);
+                context.strokeStyle = '#ffffff';
+                drawLines(context, polylines, margin, true);
             }
 
             // If steps are not complete
@@ -97,7 +97,8 @@ const sketch = () =>
             }
             else
             {
-                if(iterations < numIterations)
+                // If under the max number of iterations
+                if (iterations < numIterations)
                 {
                     let index = 0;
                     lines.forEach((line) =>
@@ -110,6 +111,7 @@ const sketch = () =>
                         }
                         index++;
                     });
+                    // Generate new start points and reset steps
                     generateStartPoints();
                     stepsTaken = 0;
                     iterations++;
@@ -118,13 +120,13 @@ const sketch = () =>
 
             // Clear canvas and fill background
             context.clearRect(0, 0, width, height);
-            context.fillStyle = colors.black;
+            context.fillStyle = '#111111';
             context.fillRect(0, 0, width, height);
 
             // Draw new lines
             const polylines = lines.map((line) => line.points);
             const clippedLines = clipPolylinesToBox(polylines, clipBox, false, false);
-            drawLines(context, clippedLines, lineWidth);
+            drawLines(context, clippedLines, lineWidth, false);
 
             stepsTaken++;
         },
@@ -144,17 +146,17 @@ function generateStartPoints()
             velocityX: 0,
             velocityY: 0,
             points: [[startPoints[i][0], startPoints[i][1]]],
-            color: colors.white,
+            color: '#ffffff',
         });
     }
     // Discard poisson array
     startPoints = poisson.reset();
 }
 
-function drawLines(context, clippedLines, width)
+function drawLines(context, clippedLines, width, white)
 {
     context.lineWidth = width;
-    clippedLines.forEach((line) =>
+    clippedLines.forEach((line, index) =>
     {
         const [start, ...pts] = line;
         context.beginPath();
@@ -163,9 +165,14 @@ function drawLines(context, clippedLines, width)
         {
             context.lineTo(...pt);
         });
-        context.strokeStyle = colors.white;
+        if (!white) context.strokeStyle = lines[index].color;
         context.stroke();
     });
+}
+
+function mapRange(value, inMin, inMax, outMin, outMax)
+{
+    return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
 }
 
 function extendLine(line, width, height)
@@ -185,6 +192,11 @@ function extendLine(line, width, height)
     // Use damping to slow down the particle (think friction)
     line.velocityX *= damping;
     line.velocityY *= damping;
+
+    const colorValue = mapRange(line.x, 100, width, 0, colors.length);
+    const color = colors[Math.floor(colorValue)];
+    console.log(colorValue);
+    line.color = color;
 }
 
 function checkProximity(x, y, context)
