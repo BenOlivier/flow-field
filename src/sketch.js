@@ -120,13 +120,21 @@ const sketch = () =>
 
             // Clear canvas and fill background
             context.clearRect(0, 0, width, height);
-            context.fillStyle = '#fffee0';
+            context.fillStyle = '#0d1221';
             context.fillRect(0, 0, width, height);
 
             // Draw new lines
             const polylines = lines.map((line) => line.points);
             const clippedLines = clipPolylinesToBox(polylines, clipBox, false, false);
-            drawLines(context, polylines, lineWidth, false);
+
+            clippedLines.forEach((line) =>
+            {
+                const color = setColor(line[Math.floor(line.length / 2)][0],
+                    line[Math.floor(line.length / 2)][1], width, height);
+                line.push(color);
+            });
+
+            drawLines(context, clippedLines, lineWidth, false);
 
             stepsTaken++;
         },
@@ -140,34 +148,31 @@ function generateStartPoints()
     // Fill lines array with line objects
     for (let i = 0; i < startPoints.length; i++)
     {
-        const color = setColor(startPoints[i][0], startPoints[i][1]);
-
         lines.push({
             x: startPoints[i][0],
             y: startPoints[i][1],
             velocityX: 0,
             velocityY: 0,
             points: [[startPoints[i][0], startPoints[i][1]]],
-            color: color,
         });
     }
     // Discard poisson array
     startPoints = poisson.reset();
 }
 
-function setColor(x, y)
+function setColor(x, y, width, height)
 {
     // const noiseValue = ((simplex.noise2D(x / window.innerWidth * scale,
     //     y / window.innerHeight * scale) * turbulence) + 1) / 2;
-    const noiseValue = Math.abs(simplex.noise2D(x / window.innerWidth * scale,
-        y / window.innerHeight * scale) * turbulence);
+    const noiseValue = Math.abs(simplex.noise2D(x / width * scale,
+        y / height * scale) * turbulence);
     return colors[Math.floor(noiseValue * colors.length)];
 }
 
 function drawLines(context, clippedLines, width, margin)
 {
     context.lineWidth = width;
-    clippedLines.forEach((line, index) =>
+    clippedLines.forEach((line) =>
     {
         const [start, ...pts] = line;
         context.beginPath();
@@ -176,7 +181,7 @@ function drawLines(context, clippedLines, width, margin)
         {
             context.lineTo(...pt);
         });
-        if (!margin) context.strokeStyle = lines[index].color;
+        if (!margin) context.strokeStyle = line[line.length - 1];
         context.stroke();
     });
 
