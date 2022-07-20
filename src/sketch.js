@@ -18,11 +18,11 @@ const lines = [];
 let startPoints = [];
 
 const colors = [
-    '#12c2e9',
-    '#c471ed',
-    '#c471ed',
-    '#c471ed',
-    '#f64f59',
+    '#089f8f',
+    '#00898a',
+    '#08737f',
+    '#215d6e',
+    '#2a4858',
 ];
 
 // Sketch settings
@@ -33,20 +33,20 @@ const settings = {
 };
 
 const padding = 100;
-const numIterations = 20;
+const numIterations = 0;
 const stepDistance = 8;
 const numSteps = 10;
-const minLength = 4;
+const minLength = 2;
 const damping = 0.1;
 const lineWidth = 3;
-const margin = 12;
-const scale = 0.5;
-const turbulence = 0.8;
+const margin = 15;
+const scale = 1;
+const turbulence = 1;
 
 const sketch = () =>
 {
     let stepsTaken = 0;
-    let iterations = 0;
+    let iteration = 1;
 
     return {
         begin()
@@ -98,7 +98,7 @@ const sketch = () =>
             else
             {
                 // If under the max number of iterations
-                if (iterations < numIterations)
+                if (iteration < numIterations)
                 {
                     let index = 0;
                     lines.forEach((line) =>
@@ -114,19 +114,19 @@ const sketch = () =>
                     // Generate new start points and reset steps
                     generateStartPoints();
                     stepsTaken = 0;
-                    iterations++;
+                    iteration++;
                 }
             }
 
             // Clear canvas and fill background
             context.clearRect(0, 0, width, height);
-            context.fillStyle = '#111111';
+            context.fillStyle = '#fffee0';
             context.fillRect(0, 0, width, height);
 
             // Draw new lines
             const polylines = lines.map((line) => line.points);
             const clippedLines = clipPolylinesToBox(polylines, clipBox, false, false);
-            drawLines(context, clippedLines, lineWidth, false);
+            drawLines(context, polylines, lineWidth, false);
 
             stepsTaken++;
         },
@@ -140,20 +140,31 @@ function generateStartPoints()
     // Fill lines array with line objects
     for (let i = 0; i < startPoints.length; i++)
     {
+        const color = setColor(startPoints[i][0], startPoints[i][1]);
+
         lines.push({
             x: startPoints[i][0],
             y: startPoints[i][1],
             velocityX: 0,
             velocityY: 0,
             points: [[startPoints[i][0], startPoints[i][1]]],
-            color: '#ffffff',
+            color: color,
         });
     }
     // Discard poisson array
     startPoints = poisson.reset();
 }
 
-function drawLines(context, clippedLines, width, white)
+function setColor(x, y)
+{
+    // const noiseValue = ((simplex.noise2D(x / window.innerWidth * scale,
+    //     y / window.innerHeight * scale) * turbulence) + 1) / 2;
+    const noiseValue = Math.abs(simplex.noise2D(x / window.innerWidth * scale,
+        y / window.innerHeight * scale) * turbulence);
+    return colors[Math.floor(noiseValue * colors.length)];
+}
+
+function drawLines(context, clippedLines, width, margin)
 {
     context.lineWidth = width;
     clippedLines.forEach((line, index) =>
@@ -165,15 +176,17 @@ function drawLines(context, clippedLines, width, white)
         {
             context.lineTo(...pt);
         });
-        if (!white) context.strokeStyle = lines[index].color;
+        if (!margin) context.strokeStyle = lines[index].color;
         context.stroke();
     });
+
+    // console.log(lines.length, clippedLines.length)
 }
 
-function mapRange(value, inMin, inMax, outMin, outMax)
-{
-    return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
-}
+// function mapRange(value, inMin, inMax, outMin, outMax)
+// {
+//     return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
+// }
 
 function extendLine(line, width, height)
 {
@@ -192,11 +205,6 @@ function extendLine(line, width, height)
     // Use damping to slow down the particle (think friction)
     line.velocityX *= damping;
     line.velocityY *= damping;
-
-    const colorValue = mapRange(line.x, 100, width, 0, colors.length);
-    const color = colors[Math.floor(colorValue)];
-    console.log(colorValue);
-    line.color = color;
 }
 
 function checkProximity(x, y, context)
