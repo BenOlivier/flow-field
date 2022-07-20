@@ -18,11 +18,13 @@ const lines = [];
 let startPoints = [];
 
 const colors = [
-    '#089f8f',
-    '#00898a',
-    '#08737f',
-    '#215d6e',
-    '#2a4858',
+    '#E6F6FF',
+    '#93BDE0',
+    '#769BC2',
+    '#5979A3',
+    '#3C5684',
+    '#1F3466',
+    '#021247',
 ];
 
 // Sketch settings
@@ -32,13 +34,13 @@ const settings = {
     loop: false,
 };
 
-const padding = 100;
+const padding = 80;
 const numIterations = 10;
 const stepDistance = 4;
-const numSteps = 10;
-const minLength = 2;
+const maxSteps = 8;
+const minSteps = 2;
 const damping = 0.1;
-const lineWidth = 2;
+const lineWidth = 3;
 const margin = 8;
 const scale = 2;
 const turbulence = 1;
@@ -78,13 +80,12 @@ const sketch = () =>
                 drawLines(context, polylines, margin, true);
             }
 
-            // If steps are not complete
-            if (stepsTaken < numSteps)
+            if (stepsTaken < maxSteps)
             {
                 lines.forEach((line) =>
                 {
-                    // If this line has not been stopped
-                    if (line.points.length === stepsTaken)
+                    // If this line has not reached its full length or been stopped
+                    if (stepsTaken < line.length && line.points.length === stepsTaken)
                     {
                         // Calculate next step
                         extendLine(line, width, height);
@@ -104,7 +105,7 @@ const sketch = () =>
                     lines.forEach((line) =>
                     {
                         // If this line is under minimum length
-                        if (line.points.length < minLength)
+                        if (line.points.length < minSteps)
                         {
                             // Remove line
                             lines.splice(index, 1);
@@ -120,7 +121,7 @@ const sketch = () =>
 
             // Clear canvas and fill background
             context.clearRect(0, 0, width, height);
-            context.fillStyle = '#0d1221';
+            context.fillStyle = '#0f1111';
             context.fillRect(0, 0, width, height);
 
             // Draw new lines
@@ -135,7 +136,6 @@ const sketch = () =>
             });
 
             drawLines(context, clippedLines, lineWidth, false);
-
             stepsTaken++;
         },
     };
@@ -154,6 +154,7 @@ function generateStartPoints()
             velocityX: 0,
             velocityY: 0,
             points: [[startPoints[i][0], startPoints[i][1]]],
+            length: Math.floor(randomInRange(minSteps, maxSteps)),
         });
     }
     // Discard poisson array
@@ -221,6 +222,11 @@ function checkProximity(x, y, context)
     {
         return true;
     }
+}
+
+function randomInRange(min, max)
+{
+    return Math.random() * (max - min) + min;
 }
 
 canvasSketch(sketch, settings);
