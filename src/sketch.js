@@ -33,14 +33,14 @@ const settings = {
 };
 
 const padding = 100;
-const numIterations = 0;
-const stepDistance = 8;
+const numIterations = 10;
+const stepDistance = 4;
 const numSteps = 10;
 const minLength = 2;
 const damping = 0.1;
-const lineWidth = 3;
-const margin = 15;
-const scale = 1;
+const lineWidth = 2;
+const margin = 8;
+const scale = 2;
 const turbulence = 1;
 
 const sketch = () =>
