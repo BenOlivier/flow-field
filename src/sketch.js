@@ -20,12 +20,28 @@ let startPoints = [];
 const colors = [
     '#E6F6FF',
     '#93BDE0',
-    '#769BC2',
     '#5979A3',
-    '#3C5684',
     '#1F3466',
     '#021247',
 ];
+
+const weights = [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+];
+// const weights = [
+//     640 / 1270,
+//     320 / 1270,
+//     160 / 1270,
+//     80 / 1270,
+//     40 / 1270,
+//     20 / 1270,
+//     10 / 1270,
+// ];
+const probs = [];
 
 // Sketch settings
 const settings = {
@@ -54,6 +70,13 @@ const sketch = () =>
         begin()
         {
             generateStartPoints();
+
+            let sum = 0;
+            for (let i = 0; i < weights.length - 1; i++)
+            {
+                sum += (weights[i]);
+                probs[i] = sum;
+            }
         },
         render({ context, width, height, playhead })
         {
@@ -155,6 +178,7 @@ function generateStartPoints()
             velocityY: 0,
             points: [[startPoints[i][0], startPoints[i][1]]],
             length: Math.floor(randomInRange(minSteps, maxSteps)),
+            seed: Math.random(), // TODO:
         });
     }
     // Discard poisson array
@@ -163,11 +187,14 @@ function generateStartPoints()
 
 function setColor(x, y, width, height)
 {
-    // const noiseValue = ((simplex.noise2D(x / window.innerWidth * scale,
-    //     y / window.innerHeight * scale) * turbulence) + 1) / 2;
+    const random = Math.random();
+    let index = 0;
+    for (let i = 0; i < probs.length && random >= probs[i]; i++) index = i;
+    const randomValue = index / probs.length;
+
     const noiseValue = Math.abs(simplex.noise2D(x / width * scale,
         y / height * scale) * turbulence);
-    return colors[Math.floor(noiseValue * colors.length)];
+    return colors[Math.floor((noiseValue + randomValue) / 2 * colors.length)];
 }
 
 function drawLines(context, clippedLines, width, margin)
