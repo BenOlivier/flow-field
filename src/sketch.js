@@ -1,12 +1,10 @@
-// Based on flow-field by Varun Vachhar
-// https://github.com/winkerVSbecks/sketchbook/blob/master/flow-field.js
-
 import './style.css';
 
 const canvasSketch = require('canvas-sketch');
 const SimplexNoise = require('simplex-noise');
 const FastPoissonDiskSampling = require('fast-2d-poisson-disk-sampling');
 const { clipPolylinesToBox } = require('canvas-sketch-util/geometry');
+const lineclip = require('lineclip');
 const simplex = new SimplexNoise();
 const poisson = new FastPoissonDiskSampling({
     shape: [window.innerWidth, window.innerHeight],
@@ -26,22 +24,20 @@ const colors = [
 ];
 
 const weights = [
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
+    0.5,
+    0.25,
+    0.125,
+    0,
+    0,
 ];
-// const weights = [
-//     640 / 1270,
-//     320 / 1270,
-//     160 / 1270,
-//     80 / 1270,
-//     40 / 1270,
-//     20 / 1270,
-//     10 / 1270,
-// ];
-const probs = [];
+const probs = [
+    0.8,
+    0.9,
+    0.95,
+    0.975,
+    0.99,
+    1,
+];
 
 // Sketch settings
 const settings = {
@@ -51,13 +47,13 @@ const settings = {
 };
 
 const padding = 80;
-const numIterations = 10;
-const stepDistance = 4;
-const maxSteps = 8;
+const numIterations = 1;
+const stepDistance = 8;
+const maxSteps = 20;
 const minSteps = 2;
 const damping = 0.1;
-const lineWidth = 3;
-const margin = 8;
+const lineWidth = 4;
+const margin = 16;
 const scale = 2;
 const turbulence = 1;
 
@@ -71,12 +67,12 @@ const sketch = () =>
         {
             generateStartPoints();
 
-            let sum = 0;
-            for (let i = 0; i < weights.length - 1; i++)
-            {
-                sum += (weights[i]);
-                probs[i] = sum;
-            }
+            // let sum = 0;
+            // for (let i = 0; i < weights.length - 1; i++)
+            // {
+            //     sum += (weights[i]);
+            //     probs[i] = sum;
+            // }
         },
         render({ context, width, height, playhead })
         {
@@ -95,12 +91,13 @@ const sketch = () =>
                 [width - padding, height - padding],
             ];
 
-            if (stepsTaken > 0)
+            if (stepsTaken > 0) // TODO: remove?
             {
-                // Create margin polylines
-                const polylines = lines.map((line) => line.points);
-                context.strokeStyle = '#ffffff';
-                drawLines(context, polylines, margin, true);
+                // Create margin lines
+                lines.forEach((line) =>
+                {
+                    drawLine(context, line.points, margin, '#ffffff');
+                });
             }
 
             if (stepsTaken < maxSteps)
@@ -124,17 +121,6 @@ const sketch = () =>
                 // If under the max number of iterations
                 if (iteration < numIterations)
                 {
-                    let index = 0;
-                    lines.forEach((line) =>
-                    {
-                        // If this line is under minimum length
-                        if (line.points.length < minSteps)
-                        {
-                            // Remove line
-                            lines.splice(index, 1);
-                        }
-                        index++;
-                    });
                     // Generate new start points and reset steps
                     generateStartPoints();
                     stepsTaken = 0;
@@ -147,18 +133,23 @@ const sketch = () =>
             context.fillStyle = '#0f1111';
             context.fillRect(0, 0, width, height);
 
-            // Draw new lines
-            const polylines = lines.map((line) => line.points);
-            const clippedLines = clipPolylinesToBox(polylines, clipBox, false, false);
-
-            clippedLines.forEach((line) =>
+            lines.forEach((line, index) =>
             {
-                const color = setColor(line[Math.floor(line.length / 2)][0],
-                    line[Math.floor(line.length / 2)][1], width, height);
-                line.push(color);
+                line.clippedPoints = line.points.map(function(lineB)
+                {
+                    return lineclip(lineB, clipBox);
+                }).reduce(function(a, b)
+                {
+                    return a.concat(b);
+                }, []);
+                console.log(line);
+                if (line.clippedPoints.length > 2)
+                {
+                    setColor(line, width, height);
+                    drawLine(context, line.clippedPoints, lineWidth, line.color);
+                }
+                else lines.splice(index, 1);
             });
-
-            drawLines(context, clippedLines, lineWidth, false);
             stepsTaken++;
         },
     };
@@ -177,49 +168,50 @@ function generateStartPoints()
             velocityX: 0,
             velocityY: 0,
             points: [[startPoints[i][0], startPoints[i][1]]],
+            clippedPoints: [],
+            color: '#ffffff',
             length: Math.floor(randomInRange(minSteps, maxSteps)),
-            seed: Math.random(), // TODO:
+            seed: Math.random(),
         });
     }
     // Discard poisson array
     startPoints = poisson.reset();
 }
 
-function setColor(x, y, width, height)
+function setColor(line, width, height)
 {
-    const random = Math.random();
-    let index = 0;
-    for (let i = 0; i < probs.length && random >= probs[i]; i++) index = i;
-    const randomValue = index / probs.length;
+    // Calculate noise based value 0 - 1
+    const noiseValue = Math.abs(simplex.noise2D(line.x / width * scale,
+    line.y / height * scale) * turbulence);
 
-    const noiseValue = Math.abs(simplex.noise2D(x / width * scale,
-        y / height * scale) * turbulence);
-    return colors[Math.floor((noiseValue + randomValue) / 2 * colors.length)];
+    // Calculate random variation
+    // let index = 0;
+    // for (let i = 0; line.seed > probs[i]; i++)
+    // {
+    //     index = i;
+    // }
+    // const randomValue = index / probs.length;
+    const randomValue = 0;
+
+    // Combined value clamped 0 - 1
+    const colorValue = clamp((noiseValue + randomValue), 0, 1);
+    // Color selected by combined value
+    line.color = colors[Math.floor(colorValue * colors.length)];
 }
 
-function drawLines(context, clippedLines, width, margin)
+function drawLine(context, points, width, color)
 {
     context.lineWidth = width;
-    clippedLines.forEach((line) =>
+    const [start, ...pts] = points;
+    context.beginPath();
+    context.moveTo(...start);
+    pts.forEach((pt) =>
     {
-        const [start, ...pts] = line;
-        context.beginPath();
-        context.moveTo(...start);
-        pts.forEach((pt) =>
-        {
-            context.lineTo(...pt);
-        });
-        if (!margin) context.strokeStyle = line[line.length - 1];
-        context.stroke();
+        context.lineTo(...pt);
     });
-
-    // console.log(lines.length, clippedLines.length)
+    context.strokeStyle = color;
+    context.stroke();
 }
-
-// function mapRange(value, inMin, inMax, outMin, outMax)
-// {
-//     return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
-// }
 
 function extendLine(line, width, height)
 {
@@ -255,5 +247,15 @@ function randomInRange(min, max)
 {
     return Math.random() * (max - min) + min;
 }
+
+function clamp(current, min, max)
+{
+    return Math.min(Math.max(current, min), max);
+}
+
+// function mapRange(value, inMin, inMax, outMin, outMax)
+// {
+//     return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
+// }
 
 canvasSketch(sketch, settings);
