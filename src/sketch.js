@@ -23,18 +23,11 @@ const colors = [
     '#021247',
 ];
 
-// const probs = [
-//     0.5,
-//     0.75,
-//     0.875,
-//     0.95,
-//     0.98,
-// ];
 const probs = [
-    0.2,
-    0.4,
-    0.6,
-    0.8,
+    0,
+    0.5,
+    0.75,
+    1,
     1,
 ];
 
@@ -46,14 +39,14 @@ const settings = {
 };
 
 const padding = 80;
-const numIterations = 10;
+const numIterations = 4;
 const stepDistance = 5;
 const maxSteps = 8;
 const minSteps = 2;
 const damping = 0.1;
 const lineWidth = 3;
 const lineMargin = 10;
-const scale = 2;
+const scale = 1;
 const turbulence = 1;
 const colorOffset = 1;
 
@@ -176,11 +169,19 @@ function generateStartPoints()
 
 function setColor(line, width, height)
 {
-    // Calculate noise based value 0 - 1
-    const noiseValue = Math.abs(simplex.noise2D(line.x / width * scale,
-    line.y / height * scale) * turbulence);
+    // Get line's middle point
+    const midPoint = [
+        line.clippedPoints[Math.floor(line.clippedPoints.length / 2)][0],
+        line.clippedPoints[Math.floor(line.clippedPoints.length / 2)][1],
+    ];
 
-    // Calculate random variation
+    // Calculate noise value 0 - 1
+    const rawNoiseValue = Math.abs(simplex.noise2D(
+        midPoint[0] / width * scale, midPoint[1] / height * scale) * turbulence);
+    // Remap noise value
+    const mappedNoiseValue = Math.pow(rawNoiseValue, 0.5);
+
+    // Calculate random value
     let index = 0;
     for (let i = 0; probs[i] < line.seed; i++)
     {
@@ -188,9 +189,8 @@ function setColor(line, width, height)
     }
     const randomValue = index % 2 == 0? index / probs.length : -index / probs.length;
 
-    // Combined value clamped 0 - 1
-    // const colorValue = clamp((noiseValue + colorOffset), 0, 1);
-    const colorValue = (noiseValue + randomValue + colorOffset) / 2;
+    // Combined value
+    const colorValue = mappedNoiseValue + randomValue;
     // Color selected by combined value
     line.color = colors[Math.floor(colorValue * colors.length)];
 }
