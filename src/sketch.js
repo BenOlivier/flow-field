@@ -1,14 +1,14 @@
 import './style.css';
+import { randomInRange, clamp } from './js/math.js'
 
 const canvasSketch = require('canvas-sketch');
 const SimplexNoise = require('simplex-noise');
 const FastPoissonDiskSampling = require('fast-2d-poisson-disk-sampling');
-const { clipPolylinesToBox } = require('canvas-sketch-util/geometry');
 const lineclip = require('lineclip');
 const simplex = new SimplexNoise();
 const poisson = new FastPoissonDiskSampling({
     shape: [window.innerWidth, window.innerHeight],
-    radius: 25,
+    radius: 10,
     tries: 20,
 });
 
@@ -16,7 +16,7 @@ const lines = [];
 let startPoints = [];
 
 const colors = [
-    '#E6F6FF',
+    '#A9D5ED',
     '#93BDE0',
     '#5979A3',
     '#1F3466',
@@ -47,13 +47,13 @@ const settings = {
 };
 
 const padding = 80;
-const numIterations = 1;
-const stepDistance = 7;
-const maxSteps = 20;
+const numIterations = 10;
+const stepDistance = 5;
+const maxSteps = 8;
 const minSteps = 2;
 const damping = 0.1;
-const lineWidth = 4;
-const margin = 16;
+const lineWidth = 3;
+const lineMargin = 10;
 const scale = 2;
 const turbulence = 1;
 
@@ -92,14 +92,11 @@ const sketch = () =>
                 height - padding,
             ];
 
-            if (stepsTaken > 0) // TODO: remove?
+            // Draw margin lines
+            lines.forEach((line) =>
             {
-                // Create margin lines
-                lines.forEach((line) =>
-                {
-                    drawLine(context, line.points, margin, '#ffffff');
-                });
-            }
+                drawLine(context, line.points, lineMargin, '#ffffff');
+            });
 
             if (stepsTaken < maxSteps)
             {
@@ -143,13 +140,16 @@ const sketch = () =>
                 {
                     return a.concat(b);
                 }, []);
+                // If line has at least 2 points
                 if (line.clippedPoints.length > 1)
                 {
+                    // Set line's color and draw it
                     setColor(line, width, height);
                     drawLine(context, line.clippedPoints, lineWidth, line.color);
                 }
                 else
                 {
+                    // Otherwise discard
                     lines.splice(index, 1);
                 }
             });
@@ -245,20 +245,5 @@ function checkProximity(x, y, context)
         return true;
     }
 }
-
-function randomInRange(min, max)
-{
-    return Math.random() * (max - min) + min;
-}
-
-function clamp(current, min, max)
-{
-    return Math.min(Math.max(current, min), max);
-}
-
-// function mapRange(value, inMin, inMax, outMin, outMax)
-// {
-//     return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
-// }
 
 canvasSketch(sketch, settings);
