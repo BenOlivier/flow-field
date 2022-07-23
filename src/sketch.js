@@ -1,5 +1,5 @@
 import './style.css';
-import { randomInRange } from './js/math.js';
+import { randomInRange, remap } from './utils/math.js';
 import chroma from 'chroma-js';
 
 const canvasSketch = require('canvas-sketch');
@@ -10,7 +10,7 @@ const lineclip = require('lineclip');
 const simplex = new SimplexNoise();
 const poisson = new FastPoissonDiskSampling({
     shape: [window.innerWidth, window.innerHeight],
-    radius: 10,
+    radius: 8,
     tries: 20,
 });
 
@@ -42,15 +42,15 @@ const settings = {
 };
 
 const padding = 80;
-const numIterations = 4;
-const stepDistance = 5;
+const numIterations = 1;
+const stepDistance = randomInRange(2, 4);
 const maxSteps = 8;
 const minSteps = 2;
 const damping = 0.1;
-const lineWidth = 3;
-const lineMargin = 10;
-const scale = 1;
-const turbulence = 1;
+const lineWidth = 2;
+const lineMargin = 2;
+const scale = randomInRange(0.1, 2);
+const turbulence = randomInRange(1, 10 / (scale * 4));
 
 const sketch = () =>
 {
@@ -181,7 +181,7 @@ function setColor(line, width, height)
     const rawNoiseValue = Math.abs(simplex.noise2D(
         midPoint[0] / width * scale, midPoint[1] / height * scale) * turbulence);
     // Remap noise value
-    const mappedNoiseValue = Math.pow(rawNoiseValue, 1);
+    const mappedNoiseValue = remap(rawNoiseValue, 0, turbulence, 0, 1);
 
     // Calculate random value
     let index = 0;
