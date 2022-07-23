@@ -21,16 +21,16 @@ const colors = [];
 const palette = colorPalettes[Math.floor(Math.random() * 100)];
 for (let i = 0; i < 5; i++)
 {
-    colors[i] = chroma.scale([palette[i], chroma(palette[i]).darken(5)]).mode('lch').colors(5);
+    colors[i] = chroma.scale([palette[i], chroma(palette[i]).darken(5)]).mode('lch').colors(10);
 }
 // console.log(colors)
 
 
 const probs = [
     0,
-    0.5,
     0.75,
-    1,
+    0.875,
+    0.96,
     1,
 ];
 
