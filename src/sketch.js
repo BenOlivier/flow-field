@@ -48,7 +48,7 @@ const settings = {
 
 const padding = 80;
 const numIterations = 1;
-const stepDistance = 8;
+const stepDistance = 7;
 const maxSteps = 20;
 const minSteps = 2;
 const damping = 0.1;
@@ -84,11 +84,12 @@ const sketch = () =>
             // Set line paramaters
             context.lineJoin = 'round';
             context.lineCap = 'round';
-
             // Define clip box
             const clipBox = [
-                [padding, padding],
-                [width - padding, height - padding],
+                padding,
+                padding,
+                width - padding,
+                height - padding,
             ];
 
             if (stepsTaken > 0) // TODO: remove?
@@ -109,8 +110,10 @@ const sketch = () =>
                     {
                         // Calculate next step
                         extendLine(line, width, height);
+                        // If the new position is in space
                         if (checkProximity(line.x, line.y, context) === true)
                         {
+                            // Add the new position to the points
                             line.points.push([line.x, line.y]);
                         }
                     }
@@ -135,20 +138,20 @@ const sketch = () =>
 
             lines.forEach((line, index) =>
             {
-                line.clippedPoints = line.points.map(function(lineB)
-                {
-                    return lineclip(lineB, clipBox);
-                }).reduce(function(a, b)
+                // Clip lines to box
+                line.clippedPoints = lineclip(line.points, clipBox).reduce(function(a, b)
                 {
                     return a.concat(b);
                 }, []);
-                console.log(line);
-                if (line.clippedPoints.length > 2)
+                if (line.clippedPoints.length > 1)
                 {
                     setColor(line, width, height);
                     drawLine(context, line.clippedPoints, lineWidth, line.color);
                 }
-                else lines.splice(index, 1);
+                else
+                {
+                    lines.splice(index, 1);
+                }
             });
             stepsTaken++;
         },
