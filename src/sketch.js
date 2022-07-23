@@ -1,5 +1,5 @@
 import './style.css';
-import { randomInRange, clamp } from './js/math.js'
+import { randomInRange, clamp, mapRange } from './js/math.js';
 
 const canvasSketch = require('canvas-sketch');
 const SimplexNoise = require('simplex-noise');
@@ -23,19 +23,18 @@ const colors = [
     '#021247',
 ];
 
-const weights = [
-    0.5,
-    0.25,
-    0.125,
-    0,
-    0,
-];
+// const probs = [
+//     0.5,
+//     0.75,
+//     0.875,
+//     0.95,
+//     0.98,
+// ];
 const probs = [
+    0.2,
+    0.4,
+    0.6,
     0.8,
-    0.9,
-    0.95,
-    0.975,
-    0.99,
     1,
 ];
 
@@ -56,6 +55,7 @@ const lineWidth = 3;
 const lineMargin = 10;
 const scale = 2;
 const turbulence = 1;
+const colorOffset = 1;
 
 const sketch = () =>
 {
@@ -66,13 +66,6 @@ const sketch = () =>
         begin()
         {
             generateStartPoints();
-
-            // let sum = 0;
-            // for (let i = 0; i < weights.length - 1; i++)
-            // {
-            //     sum += (weights[i]);
-            //     probs[i] = sum;
-            // }
         },
         render({ context, width, height, playhead })
         {
@@ -188,16 +181,16 @@ function setColor(line, width, height)
     line.y / height * scale) * turbulence);
 
     // Calculate random variation
-    // let index = 0;
-    // for (let i = 0; line.seed > probs[i]; i++)
-    // {
-    //     index = i;
-    // }
-    // const randomValue = index / probs.length;
-    const randomValue = 0;
+    let index = 0;
+    for (let i = 0; probs[i] < line.seed; i++)
+    {
+        index = i;
+    }
+    const randomValue = index % 2 == 0? index / probs.length : -index / probs.length;
 
     // Combined value clamped 0 - 1
-    const colorValue = clamp((noiseValue + randomValue), 0, 1);
+    // const colorValue = clamp((noiseValue + colorOffset), 0, 1);
+    const colorValue = (noiseValue + randomValue + colorOffset) / 2;
     // Color selected by combined value
     line.color = colors[Math.floor(colorValue * colors.length)];
 }
