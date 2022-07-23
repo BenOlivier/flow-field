@@ -1,8 +1,10 @@
 import './style.css';
-import { randomInRange, clamp, mapRange } from './js/math.js';
+import { randomInRange } from './js/math.js';
+import chroma from 'chroma-js';
 
 const canvasSketch = require('canvas-sketch');
 const SimplexNoise = require('simplex-noise');
+const colorPalettes = require('nice-color-palettes');
 const FastPoissonDiskSampling = require('fast-2d-poisson-disk-sampling');
 const lineclip = require('lineclip');
 const simplex = new SimplexNoise();
@@ -14,14 +16,15 @@ const poisson = new FastPoissonDiskSampling({
 
 const lines = [];
 let startPoints = [];
+const colors = [];
 
-const colors = [
-    '#A9D5ED',
-    '#93BDE0',
-    '#5979A3',
-    '#1F3466',
-    '#021247',
-];
+const palette = colorPalettes[Math.floor(Math.random() * 100)];
+for (let i = 0; i < 5; i++)
+{
+    colors[i] = chroma.scale([palette[i], chroma(palette[i]).darken(5)]).mode('lch').colors(5);
+}
+// console.log(colors)
+
 
 const probs = [
     0,
@@ -48,7 +51,6 @@ const lineWidth = 3;
 const lineMargin = 10;
 const scale = 1;
 const turbulence = 1;
-const colorOffset = 1;
 
 const sketch = () =>
 {
@@ -179,7 +181,7 @@ function setColor(line, width, height)
     const rawNoiseValue = Math.abs(simplex.noise2D(
         midPoint[0] / width * scale, midPoint[1] / height * scale) * turbulence);
     // Remap noise value
-    const mappedNoiseValue = Math.pow(rawNoiseValue, 0.5);
+    const mappedNoiseValue = Math.pow(rawNoiseValue, 1);
 
     // Calculate random value
     let index = 0;
@@ -191,8 +193,11 @@ function setColor(line, width, height)
 
     // Combined value
     const colorValue = mappedNoiseValue + randomValue;
+
+    // Get palette index
+    const paletteIndex = Math.floor(line.seed * colors.length);
     // Color selected by combined value
-    line.color = colors[Math.floor(colorValue * colors.length)];
+    line.color = colors[paletteIndex][Math.floor(colorValue * colors.length)];
 }
 
 function drawLine(context, points, width, color)
