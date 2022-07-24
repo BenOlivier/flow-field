@@ -10,7 +10,7 @@ const lineclip = require('lineclip');
 const simplex = new SimplexNoise();
 const poisson = new FastPoissonDiskSampling({
     shape: [window.innerWidth, window.innerHeight],
-    radius: 8,
+    radius: 200,
     tries: 20,
 });
 
@@ -35,18 +35,18 @@ const probs = [
 // Sketch settings
 const settings = {
     animate: true,
-    duration: 5,
+    duration: 10,
     loop: false,
     // timeScale: 1,
 };
 
 const padding = 80;
-const stepDistance = randomInRange(2, 4);
+const stepDistance = 2
 const maxSteps = 8;
 const minSteps = 2;
 const damping = 0.1;
-const lineWidth = 2;
-const lineMargin = 2;
+const lineWidth = 4;
+const lineMargin = 4;
 const scale = randomInRange(0.1, 2);
 const turbulence = randomInRange(1, 8 / (scale * 4));
 
@@ -127,6 +127,7 @@ const sketch = () =>
                     lines.splice(index, 1);
                 }
             });
+            generateStartPoints();
         },
     };
 };
