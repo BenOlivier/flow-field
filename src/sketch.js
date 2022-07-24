@@ -24,7 +24,6 @@ for (let i = 0; i < 5; i++)
     colors[i] = chroma.scale([palette[i], chroma(palette[i]).darken(5)]).mode('lch').colors(10);
 }
 
-
 const probs = [
     0,
     0.75,
@@ -38,10 +37,10 @@ const settings = {
     animate: true,
     duration: 5,
     loop: false,
+    // timeScale: 1,
 };
 
 const padding = 80;
-const numIterations = 1;
 const stepDistance = randomInRange(2, 4);
 const maxSteps = 8;
 const minSteps = 2;
@@ -50,13 +49,9 @@ const lineWidth = 2;
 const lineMargin = 2;
 const scale = randomInRange(0.1, 2);
 const turbulence = randomInRange(1, 8 / (scale * 4));
-const speed = 1;
 
 const sketch = () =>
 {
-    let stepsTaken = 0;
-    let iteration = 1;
-
     return {
         begin()
         {
@@ -80,41 +75,32 @@ const sketch = () =>
                 height - padding,
             ];
 
-            // Draw margin lines
-            lines.forEach((line) =>
+            lines.forEach((line, index) =>
             {
+                // Draw margin lines
                 drawLine(context, line.points, lineMargin, '#ffffff');
-            });
 
-            if (stepsTaken < maxSteps)
-            {
-                lines.forEach((line) =>
+                // Calculate next step
+                extendLine(line, width, height);
+                // If the new position is in space
+                if (checkProximity(line.x, line.y, context) === true)
                 {
-                    // If this line has not reached its full length or been stopped
-                    if (stepsTaken < line.length && line.points.length === stepsTaken)
-                    {
-                        // Calculate next step
-                        extendLine(line, width, height);
-                        // If the new position is in space
-                        if (checkProximity(line.x, line.y, context) === true)
-                        {
-                            // Add the new position to the points
-                            line.points.push([line.x, line.y]);
-                        }
-                    }
-                });
-            }
-            else
-            {
-                // If under the max number of iterations
-                if (iteration < numIterations)
-                {
-                    // Generate new start points and reset steps
-                    generateStartPoints();
-                    stepsTaken = 0;
-                    iteration++;
+                    // Add the new position to the points
+                    line.points.push([line.x, line.y]);
                 }
-            }
+                else
+                {
+                    line.x = line.points[line.points.length - 1][0];
+                    line.y = line.points[line.points.length - 1][1];
+                }
+
+                if (line.points.length >= line.length)
+                {
+                    // Remove first point from line
+                    line.points.shift();
+                }
+                // if (line.points < 2) lines.splice(index, 1);
+            });
 
             // Clear canvas and fill background
             context.clearRect(0, 0, width, height);
@@ -141,7 +127,6 @@ const sketch = () =>
                     lines.splice(index, 1);
                 }
             });
-            stepsTaken++;
         },
     };
 };
