@@ -23,7 +23,6 @@ for (let i = 0; i < 5; i++)
 {
     colors[i] = chroma.scale([palette[i], chroma(palette[i]).darken(5)]).mode('lch').colors(10);
 }
-// console.log(colors)
 
 
 const probs = [
@@ -50,7 +49,8 @@ const damping = 0.1;
 const lineWidth = 2;
 const lineMargin = 2;
 const scale = randomInRange(0.1, 2);
-const turbulence = randomInRange(1, 10 / (scale * 4));
+const turbulence = randomInRange(1, 8 / (scale * 4));
+const speed = 1;
 
 const sketch = () =>
 {
@@ -62,7 +62,7 @@ const sketch = () =>
         {
             generateStartPoints();
         },
-        render({ context, width, height, playhead })
+        render({ context, width, height })
         {
             // Clear canvas and fill background
             context.clearRect(0, 0, width, height);
@@ -192,7 +192,7 @@ function setColor(line, width, height)
     const randomValue = index % 2 == 0? index / probs.length : -index / probs.length;
 
     // Combined value
-    const colorValue = mappedNoiseValue + randomValue;
+    const colorValue = mappedNoiseValue;// + randomValue;
 
     // Get palette index
     const paletteIndex = Math.floor(line.seed * colors.length);
