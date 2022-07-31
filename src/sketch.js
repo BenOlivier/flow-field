@@ -10,7 +10,7 @@ const lineclip = require('lineclip');
 const simplex = new SimplexNoise();
 const poisson = new FastPoissonDiskSampling({
     shape: [window.innerWidth, window.innerHeight],
-    radius: 200,
+    radius: 14,
     tries: 20,
 });
 
@@ -21,31 +21,31 @@ const colors = [];
 const palette = colorPalettes[Math.floor(Math.random() * 100)];
 for (let i = 0; i < 5; i++)
 {
-    colors[i] = chroma.scale([palette[i], chroma(palette[i]).darken(5)]).mode('lch').colors(10);
+    colors[i] = chroma.scale([palette[i], chroma(palette[i]).darken(100)]).mode('lch').colors(10);
 }
 
-const probs = [
-    0,
-    0.75,
-    0.875,
-    0.96,
-    1,
-];
+// const probs = [
+//     0,
+//     0.75,
+//     0.875,
+//     0.96,
+//     1,
+// ];
 
 // Sketch settings
 const settings = {
     animate: true,
-    duration: 10,
+    duration: 2,
     loop: false,
     // timeScale: 1,
 };
 
 const padding = 80;
 const stepDistance = 2
-const maxSteps = 8;
+const maxSteps = 10;
 const minSteps = 2;
 const damping = 0.1;
-const lineWidth = 4;
+const lineWidth = 3;
 const lineMargin = 4;
 const scale = randomInRange(0.1, 2);
 const turbulence = randomInRange(1, 8 / (scale * 4));
@@ -80,26 +80,22 @@ const sketch = () =>
                 // Draw margin lines
                 drawLine(context, line.points, lineMargin, '#ffffff');
 
-                // Calculate next step
-                extendLine(line, width, height);
-                // If the new position is in space
-                if (checkProximity(line.x, line.y, context) === true)
+                if (line.points.length < line.length)
                 {
-                    // Add the new position to the points
-                    line.points.push([line.x, line.y]);
+                    // Calculate next step
+                    extendLine(line, width, height);
+                    // If the new position is in space
+                    if (checkProximity(line.x, line.y, context) === true)
+                    {
+                        // Add the new position to the points
+                        line.points.push([line.x, line.y]);
+                    }
+                    else
+                    {
+                        line.x = line.points[line.points.length - 1][0];
+                        line.y = line.points[line.points.length - 1][1];
+                    }
                 }
-                else
-                {
-                    line.x = line.points[line.points.length - 1][0];
-                    line.y = line.points[line.points.length - 1][1];
-                }
-
-                if (line.points.length >= line.length)
-                {
-                    // Remove first point from line
-                    line.points.shift();
-                }
-                // if (line.points < 2) lines.splice(index, 1);
             });
 
             // Clear canvas and fill background
@@ -127,7 +123,6 @@ const sketch = () =>
                     lines.splice(index, 1);
                 }
             });
-            generateStartPoints();
         },
     };
 };
@@ -170,15 +165,15 @@ function setColor(line, width, height)
     const mappedNoiseValue = remap(rawNoiseValue, 0, turbulence, 0, 1);
 
     // Calculate random value
-    let index = 0;
-    for (let i = 0; probs[i] < line.seed; i++)
-    {
-        index = i;
-    }
-    const randomValue = index % 2 == 0? index / probs.length : -index / probs.length;
+    // let index = 0;
+    // for (let i = 0; probs[i] < line.seed; i++)
+    // {
+    //     index = i;
+    // }
+    // const randomValue = index % 2 == 0? index / probs.length : -index / probs.length;
 
     // Combined value
-    const colorValue = mappedNoiseValue;// + randomValue;
+    const colorValue = mappedNoiseValue;
 
     // Get palette index
     const paletteIndex = Math.floor(line.seed * colors.length);
